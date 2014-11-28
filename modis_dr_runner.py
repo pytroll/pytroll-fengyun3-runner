@@ -1,26 +1,4 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-# Copyright (c) 2013, 2014
-
-# Author(s):
-
-#   Adam Dybbroe   <adam.dybbroe@smhi.se>
-#   Martin Raspaud <martin.raspaud@smhi.se>
-
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """Level-1 processing for Terra/Aqua Modis Direct Readout data. Using the SPA
 modis level-1 processor from the NASA Direct Readout Lab (DRL). Listens for
 pytroll messages from the Nimbus server (PDS file dispatch) and triggers
@@ -30,32 +8,6 @@ processing on direct readout data
 
 import os
 import glob
-import logging
-
-# create logger
-LOG = logging.getLogger('')
-LOG.setLevel(logging.DEBUG)
-
-# create console handler and set level to debug
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-
-# create formatter
-formatter = logging.Formatter(
-    '%(levelname)s@%(name)s,%(asctime)s: %(message)s')
-
-# add formatter to ch
-ch.setFormatter(formatter)
-
-# add ch to logger
-LOG.addHandler(ch)
-
-LOG = logging.getLogger('modis_dr_runner')
-LOG.setLevel(logging.DEBUG)
-
-
-LOG.debug("Welcome to modis_dr_runner!")
-
 
 import modis_runner
 _PACKAGEDIR = modis_runner.__path__[0]
@@ -88,13 +40,51 @@ NAVIGATION_HELPER_FILES = ['utcpole.dat', 'leapsec.dat']
 SERVERNAME = OPTIONS['servername']
 
 from datetime import datetime
+from logging import handlers
+import logging
+LOG = logging.getLogger('modis-lvl1-processing')
+
+
+#: Default time format
+_DEFAULT_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+#: Default log format
+_DEFAULT_LOG_FORMAT = '[%(levelname)s: %(asctime)s : %(name)s] %(message)s'
+
+import sys
+_MODIS_LVL1PROC_LOG_FILE = os.environ.get('MODIS_LVL1PROC_LOG_FILE', None)
+
+
+if _MODIS_LVL1PROC_LOG_FILE:
+    #handler = logging.FileHandler(_MODIS_LVL1PROC_LOG_FILE)
+    ndays = int(OPTIONS.get("log_rotation_days", 1))
+    ncount = int(OPTIONS.get("log_rotation_backup", 5))
+    handler = handlers.TimedRotatingFileHandler(_MODIS_LVL1PROC_LOG_FILE,
+                                                when='midnight',
+                                                interval=ndays,
+                                                backupCount=ncount,
+                                                encoding=None,
+                                                delay=False,
+                                                utc=True)
+
+else:
+    handler = logging.StreamHandler(sys.stderr)
+
+formatter = logging.Formatter(fmt=_DEFAULT_LOG_FORMAT,
+                              datefmt=_DEFAULT_TIME_FORMAT)
+handler.setFormatter(formatter)
+
+handler.setLevel(logging.DEBUG)
+LOG.setLevel(logging.DEBUG)
+LOG.addHandler(handler)
+
 
 PACKETFILE_AQUA_PRFX = "P154095715409581540959"
 MODISFILE_AQUA_PRFX = "P1540064AAAAAAAAAAAAAA"
 MODISFILE_TERRA_PRFX = "P0420064AAAAAAAAAAAAAA"
 
 
-from urlparse import urlparse, urlunparse
+from urlparse import urlparse
 import posttroll.subscriber
 from posttroll.publisher import Publish
 from posttroll.message import Message
@@ -218,15 +208,10 @@ def update_utcpole_and_leapsec_files():
         # TODO!
 
         # Update the symlinks (assuming the files are okay):
-        LOG.debug("Adding symlink %s -> %s", linkfile, outfile)
-        if os.path.exists(linkfile):
-            LOG.debug("Unlinking %s", linkfile)
+        if os.path.islink(linkfile):
             os.unlink(linkfile)
 
-        try:
-            os.symlink(outfile, linkfile)
-        except OSError as err:
-            LOG.warning(str(err))
+        os.symlink(outfile, linkfile)
 
     return
 
@@ -341,6 +326,8 @@ def run_terra_l0l1(pdsfile):
 
     return retv
 
+# ---------------------------------------------------------------------------
+
 
 def get_working_dir():
     working_dir = OPTIONS['working_dir']
@@ -379,7 +366,8 @@ def run_aqua_gbad(obs_time):
     # Run the command:
     # os.system(cmdstr)
     modislvl1b_proc = Popen(cmdstr, shell=True,
-                            stderr=PIPE, stdout=PIPE)
+                            stderr=PIPE, stdout=PIPE,
+                            cwd=working_dir)
 
     while True:
         line = modislvl1b_proc.stdout.readline()
@@ -396,6 +384,8 @@ def run_aqua_gbad(obs_time):
     modislvl1b_proc.poll()
 
     return att_file, eph_file
+
+# ---------------------------------------------------------------------------
 
 
 def run_aqua_l0l1(pdsfile):
@@ -586,8 +576,7 @@ def start_modis_lvl1_processing(eos_files,
         orbnum = message.data.get('orbit_number', None)
 
         path, fname = os.path.split(urlobj.path)
-        LOG.debug("path " + str(path) + " filename = " + str(fname))
-        if fname.startswith(MODISFILE_TERRA_PRFX) and fname.endswith('001.PDS'):
+        if fname.find(MODISFILE_TERRA_PRFX) == 0 and fname.endswith('001.PDS'):
             # Check if the file exists:
             if not os.path.exists(urlobj.path):
                 LOG.warning("File is reported to be dispatched " +
@@ -604,8 +593,7 @@ def start_modis_lvl1_processing(eos_files,
                      "from internet if necessary!")
             fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
             if fresh:
-                LOG.info(
-                    "Files in etc dir are fresh! No url downloading....")
+                LOG.info("Files in etc dir are fresh! No url downloading....")
             else:
                 LOG.warning("Files in etc are non existent or too old. " +
                             "Start url fetch...")
@@ -615,7 +603,6 @@ def start_modis_lvl1_processing(eos_files,
                 LOG.info("Orb = %d" % orbnum)
             LOG.info("File = " + str(urlobj.path))
             result_files = run_terra_l0l1(urlobj.path)
-
             LOG.info("Result files: " + str(result_files))
 
             # Assume everything has gone well!
@@ -701,8 +688,7 @@ def start_modis_lvl1_processing(eos_files,
                      "from internet if necessary!")
             fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
             if fresh:
-                LOG.info(
-                    "Files in etc dir are fresh! No url downloading....")
+                LOG.info("Files in etc dir are fresh! No url downloading....")
             else:
                 LOG.warning("Files in etc are non existent or too old. " +
                             "Start url fetch...")
@@ -710,9 +696,10 @@ def start_modis_lvl1_processing(eos_files,
 
             LOG.info("File = " + str(modisfile))
             result_files = run_aqua_l0l1(modisfile)
-            LOG.debug("Result files: " + str(result_files))
+
+            LOG.info("Result files: " + str(result_files))
             # Clean register: aqua_files dict
-            LOG.info('Clean the internal eos_files register')
+            LOG.info('Clean the internal aqua_files register')
             eos_files = {}
 
             LOG.debug("Message:")
@@ -746,15 +733,13 @@ def modis_live_runner():
         LOG.handlers[0].doRollover()
     except AttributeError:
         LOG.warning("No log rotation supported for this handler...")
-    except IndexError:
-        LOG.debug("No handlers to rollover")
     LOG.info("*** Start the MODIS level-1 runner:")
     with posttroll.subscriber.Subscribe('receiver', ['PDS/0', ], True) as subscr:
         with Publish('modis_dr_runner', 0) as publisher:
-            modisfiles = {}
+            aquafiles = {}
             for msg in subscr.recv():
-                modisfiles = start_modis_lvl1_processing(modisfiles,
-                                                         publisher, msg)
+                aquafiles = start_modis_lvl1_processing(aquafiles,
+                                                        publisher, msg)
 
 
 # ---------------------------------------------------------------------------
