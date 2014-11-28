@@ -749,7 +749,7 @@ def modis_live_runner():
     except IndexError:
         LOG.debug("No handlers to rollover")
     LOG.info("*** Start the MODIS level-1 runner:")
-    with posttroll.subscriber.Subscribe('PDS', ['PDS/0', ], True) as subscr:
+    with posttroll.subscriber.Subscribe('receiver', ['PDS/0', ], True) as subscr:
         with Publish('modis_dr_runner', 0) as publisher:
             modisfiles = {}
             for msg in subscr.recv():
