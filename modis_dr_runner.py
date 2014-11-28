@@ -586,7 +586,8 @@ def start_modis_lvl1_processing(eos_files,
         orbnum = message.data.get('orbit_number', None)
 
         path, fname = os.path.split(urlobj.path)
-        if fname.find(MODISFILE_TERRA_PRFX) == 0 and fname.endswith('001.PDS'):
+        LOG.debug("path " + str(path) + " filename = " + str(fname))
+        if fname.startswith(MODISFILE_TERRA_PRFX) and fname.endswith('001.PDS'):
             # Check if the file exists:
             if not os.path.exists(urlobj.path):
                 LOG.warning("File is reported to be dispatched " +
