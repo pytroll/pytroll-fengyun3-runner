@@ -268,6 +268,7 @@ def run_terra_l0l1(pdsfile):
     wrapper_home = os.path.join(SPA_HOME, "modisl1db/wrapper/l0tol1")
     cmdstr = ("%s/run modis.pds %s sat %s modis.mxd01 %s modis.mxd03 %s" %
               (wrapper_home, pdsfile, satellite, mod01_file, mod03_file))
+    LOG.debug("Run command: " + str(cmdstr))
 
     # Run the command:
     modislvl1b_proc = Popen(cmdstr, shell=True,
@@ -300,6 +301,8 @@ def run_terra_l0l1(pdsfile):
     cmdstr = ("%s/run modis.mxd01 %s modis.mxd03 %s modis_reflective_luts %s modis_emissive_luts %s modis_qa_luts %s modis.mxd021km %s modis.mxd02hkm %s modis.mxd02qkm %s" %
               (wrapper_home, mod01_file, mod03_file,
                refl_lut, emiss_lut, qa_lut, mod021km_file, mod02hkm_file, mod02qkm_file))
+    LOG.debug("Run command: " + str(cmdstr))
+
     # Run the command:
     modislvl1b_proc = Popen(cmdstr, shell=True,
                             cwd=working_dir,
@@ -318,6 +321,8 @@ def run_terra_l0l1(pdsfile):
         LOG.info(errline)
 
     modislvl1b_proc.poll()
+    modislvl1b_status = modislvl1b_proc.returncode
+    LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
 
     # Close working directory:
     # os.close(fdwork)
