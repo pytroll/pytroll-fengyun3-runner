@@ -755,7 +755,7 @@ if __name__ == "__main__":
     logging.getLogger('').setLevel(logging.DEBUG)
     logging.getLogger('posttroll').setLevel(logging.INFO)
 
-    LOG = logging.getLogger(__name__)
+    LOG = logging.getLogger('modis_dr_runner')
     LOG.debug("Welcome to the modis_dr_runner!")
 
     modis_live_runner()
