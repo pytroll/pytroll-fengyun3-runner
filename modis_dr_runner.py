@@ -32,29 +32,11 @@ import os
 import glob
 import logging
 
-# create logger
-LOG = logging.getLogger('')
-LOG.setLevel(logging.DEBUG)
+#: Default time format
+_DEFAULT_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
-# create console handler and set level to debug
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-
-# create formatter
-formatter = logging.Formatter(
-    '%(levelname)s@%(name)s,%(asctime)s: %(message)s')
-
-# add formatter to ch
-ch.setFormatter(formatter)
-
-# add ch to logger
-LOG.addHandler(ch)
-
-LOG = logging.getLogger('modis_dr_runner')
-LOG.setLevel(logging.DEBUG)
-
-
-LOG.debug("Welcome to modis_dr_runner!")
+#: Default log format
+_DEFAULT_LOG_FORMAT = '[%(levelname)s: %(asctime)s : %(name)s] %(message)s'
 
 
 import modis_runner
@@ -219,7 +201,7 @@ def update_utcpole_and_leapsec_files():
 
         # Update the symlinks (assuming the files are okay):
         LOG.debug("Adding symlink %s -> %s", linkfile, outfile)
-        if os.path.exists(linkfile):
+        if os.path.islink(linkfile):
             LOG.debug("Unlinking %s", linkfile)
             os.unlink(linkfile)
 
@@ -305,7 +287,8 @@ def run_terra_l0l1(pdsfile):
         LOG.info(errline)
 
     modislvl1b_proc.poll()
-    #modislvl1b_status = modislvl1b_proc.returncode
+    modislvl1b_status = modislvl1b_proc.returncode
+    LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
 
     # Now do the level1a-1b processing:
     lut_home = os.path.join(SPA_HOME, "modisl1db/algorithm/data/modist/cal")
@@ -759,6 +742,22 @@ def modis_live_runner():
 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+
+    from logging import handlers
+    import sys
+
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(fmt=_DEFAULT_LOG_FORMAT,
+                                  datefmt=_DEFAULT_TIME_FORMAT)
+    handler.setFormatter(formatter)
+    logging.getLogger('').addHandler(handler)
+    logging.getLogger('').setLevel(logging.DEBUG)
+    logging.getLogger('posttroll').setLevel(logging.INFO)
+
+    LOG = logging.getLogger(__name__)
+    LOG.debug("Welcome to the modis_dr_runner!")
+
     modis_live_runner()
 
     #aqua_modis_file = '/san1/polar_in/direct_readout/modis/P1540064AAAAAAAAAAAAAA12298130323001.PDS'
