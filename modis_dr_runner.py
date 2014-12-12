@@ -34,40 +34,18 @@ import logging
 
 #: Default time format
 _DEFAULT_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
-
 #: Default log format
 _DEFAULT_LOG_FORMAT = '[%(levelname)s: %(asctime)s : %(name)s] %(message)s'
-
-
-import modis_runner
-_PACKAGEDIR = modis_runner.__path__[0]
-_CONFIG_PATH = os.path.join(os.path.dirname(_PACKAGEDIR), 'etc')
 
 SPA_HOME = os.environ.get("SPA_HOME", '')
 APPL_HOME = os.environ.get('MODIS_LVL1PROC', '')
 ETC_DIR = os.path.join(SPA_HOME, 'etc')
 
-import ConfigParser
-CONFIG_PATH = os.environ.get('MODIS_LVL1PROC_CONFIG_DIR', _CONFIG_PATH)
-print "CONFIG_PATH: ", CONFIG_PATH
-
-CONF = ConfigParser.ConfigParser()
-CONF.read(os.path.join(CONFIG_PATH, "modis_dr_config.cfg"))
+NAVIGATION_HELPER_FILES = ['utcpole.dat', 'leapsec.dat']
 
 MODE = os.getenv("SMHI_MODE")
 if MODE is None:
     MODE = "offline"
-
-OPTIONS = {}
-for option, value in CONF.items(MODE, raw=True):
-    OPTIONS[option] = value
-
-DAYS_BETWEEN_URL_DOWNLOAD = OPTIONS.get('days_between_url_download', 14)
-DAYS_KEEP_OLD_ETC_FILES = OPTIONS.get('days_keep_old_etc_files', 60)
-URL = OPTIONS['url_modis_navigation']
-NAVIGATION_HELPER_FILES = ['utcpole.dat', 'leapsec.dat']
-
-SERVERNAME = OPTIONS['servername']
 
 from datetime import datetime
 
@@ -75,8 +53,7 @@ PACKETFILE_AQUA_PRFX = "P154095715409581540959"
 MODISFILE_AQUA_PRFX = "P1540064AAAAAAAAAAAAAA"
 MODISFILE_TERRA_PRFX = "P0420064AAAAAAAAAAAAAA"
 
-
-from urlparse import urlparse, urlunparse
+from urlparse import urlparse
 import posttroll.subscriber
 from posttroll.publisher import Publish
 from posttroll.message import Message
@@ -748,10 +725,54 @@ def modis_live_runner():
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
 
-    from logging import handlers
     import sys
+    from logging import handlers
+    import argparse
+    import ConfigParser
 
-    handler = logging.StreamHandler(sys.stderr)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config-file",
+                        required=True,
+                        dest="config_file",
+                        type=str,
+                        default=None,
+                        help="The file containing configuration parameters.")
+    parser.add_argument("-l", "--log-file", dest="log",
+                        type=str,
+                        default=None,
+                        help="The file to log to (stdout per default).")
+
+    args = parser.parse_args()
+
+    CONF = ConfigParser.ConfigParser()
+
+    print "Read config from", args.config_file
+
+    CONF.read(args.config_file)
+
+    OPTIONS = {}
+    for option, value in CONF.items(MODE, raw=True):
+        OPTIONS[option] = value
+
+    DAYS_BETWEEN_URL_DOWNLOAD = OPTIONS.get('days_between_url_download', 14)
+    DAYS_KEEP_OLD_ETC_FILES = OPTIONS.get('days_keep_old_etc_files', 60)
+    URL = OPTIONS['url_modis_navigation']
+    SERVERNAME = OPTIONS['servername']
+
+    if args.log is not None:
+        ndays = int(OPTIONS.get("log_rotation_days", 1))
+        ncount = int(OPTIONS.get("log_rotation_backup", 7))
+        handler = handlers.TimedRotatingFileHandler(args.log,
+                                                    when='midnight',
+                                                    interval=ndays,
+                                                    backupCount=ncount,
+                                                    encoding=None,
+                                                    delay=False,
+                                                    utc=True)
+        handler.doRollover()
+    else:
+        handler = logging.StreamHandler(sys.stderr)
+
     handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter(fmt=_DEFAULT_LOG_FORMAT,
                                   datefmt=_DEFAULT_TIME_FORMAT)
