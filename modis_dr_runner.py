@@ -406,12 +406,14 @@ def run_aqua_l0l1(pdsfile):
     firstpart = obstime.strftime(geofile_aqua)
     mod03_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
 
-    LOG.warning("Level-1 filename: " + str(mod01_file))
+    LOG.info("Level-1 filename: " + str(mod01_file))
     satellite = "Aqua"
     wrapper_home = os.path.join(SPA_HOME, "modisl1db/wrapper/l0tol1")
     cmdstr = ("%s/run modis.pds %s sat %s modis.mxd01 %s modis.mxd03 %s gbad_eph %s gbad_att %s leapsec %s utcpole %s geocheck_threshold %s" %
               (wrapper_home, pdsfile, satellite, mod01_file, mod03_file,
                ephemeris, attitude, leapsec_name, utcpole_name, geocheck_threshold))
+    LOG.debug("Run command: " + str(cmdstr))
+
     # Run the command:
     modislvl1b_proc = Popen(cmdstr, shell=True,
                             cwd=working_dir,
@@ -430,6 +432,8 @@ def run_aqua_l0l1(pdsfile):
         LOG.info(errline)
 
     modislvl1b_proc.poll()
+    modislvl1b_status = modislvl1b_proc.returncode
+    LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
 
     # Now do the level1a-1b processing:
     lut_home = os.path.join(SPA_HOME, "modisl1db/algorithm/data/modisa/cal")
@@ -450,6 +454,7 @@ def run_aqua_l0l1(pdsfile):
     cmdstr = ("%s/run modis.mxd01 %s modis.mxd03 %s modis_reflective_luts %s modis_emissive_luts %s modis_qa_luts %s modis.mxd021km %s modis.mxd02hkm %s modis.mxd02qkm %s" %
               (wrapper_home, mod01_file, mod03_file,
                refl_lut, emiss_lut, qa_lut, mod021km_file, mod02hkm_file, mod02qkm_file))
+    LOG.debug("Run command: " + str(cmdstr))
 
     modislvl1b_proc = Popen(cmdstr, shell=True,
                             cwd=working_dir,
@@ -468,6 +473,8 @@ def run_aqua_l0l1(pdsfile):
         LOG.info(errline)
 
     modislvl1b_proc.poll()
+    modislvl1b_status = modislvl1b_proc.returncode
+    LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
 
     retv = {'mod021km_file': mod021km_file,
             'mod02hkm_file': mod02hkm_file,
