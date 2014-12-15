@@ -243,12 +243,16 @@ def run_terra_l0l1(pdsfile):
     LOG.info("Level-1 filename: " + str(mod01_file))
     satellite = "Terra"
     wrapper_home = os.path.join(SPA_HOME, "modisl1db/wrapper/l0tol1")
-    cmdstr = ("%s/run modis.pds %s sat %s modis.mxd01 %s modis.mxd03 %s" %
-              (wrapper_home, pdsfile, satellite, mod01_file, mod03_file))
-    LOG.debug("Run command: " + str(cmdstr))
-
+    # cmdstr = ("%s/run modis.pds %s sat %s modis.mxd01 %s modis.mxd03 %s" %
+    #           (wrapper_home, pdsfile, satellite, mod01_file, mod03_file))
+    cmdl = ["%s/run" % wrapper_home,
+            "modis.pds", pdsfile,
+            "sat", satellite,
+            "modis.mxd01", mod01_file,
+            "modis.mxd03", mod03_file]
+    LOG.debug("Run command: " + str(cmdl))
     # Run the command:
-    modislvl1b_proc = Popen(cmdstr, shell=True,
+    modislvl1b_proc = Popen(cmdl, shell=False,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
@@ -278,13 +282,22 @@ def run_terra_l0l1(pdsfile):
     qa_lut = os.path.join(lut_home, "MOD02_QA_LUTs.V6.1.6.0_OC.hdf")
 
     wrapper_home = os.path.join(SPA_HOME, "modisl1db/wrapper/l1atob")
-    cmdstr = ("%s/run modis.mxd01 %s modis.mxd03 %s modis_reflective_luts %s modis_emissive_luts %s modis_qa_luts %s modis.mxd021km %s modis.mxd02hkm %s modis.mxd02qkm %s" %
-              (wrapper_home, mod01_file, mod03_file,
-               refl_lut, emiss_lut, qa_lut, mod021km_file, mod02hkm_file, mod02qkm_file))
-    LOG.debug("Run command: " + str(cmdstr))
+    # cmdstr = ("%s/run modis.mxd01 %s modis.mxd03 %s modis_reflective_luts %s modis_emissive_luts %s modis_qa_luts %s modis.mxd021km %s modis.mxd02hkm %s modis.mxd02qkm %s" %
+    #           (wrapper_home, mod01_file, mod03_file,
+    # refl_lut, emiss_lut, qa_lut, mod021km_file, mod02hkm_file,
+    # mod02qkm_file))
+    cmdl = ["%s/run" % wrapper_home, "modis.mxd01",
+            mod01_file, "modis.mxd03", mod03_file,
+            "modis_reflective_luts", refl_lut,
+            "modis_emissive_luts", emiss_lut,
+            "modis_qa_luts", qa_lut,
+            "modis.mxd021km", mod021km_file,
+            "modis.mxd02hkm", mod02hkm_file,
+            "modis.mxd02qkm", mod02qkm_file]
 
+    LOG.debug("Run command: " + str(cmdl))
     # Run the command:
-    modislvl1b_proc = Popen(cmdstr, shell=True,
+    modislvl1b_proc = Popen(cmdl, shell=False,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
@@ -343,12 +356,16 @@ def run_aqua_gbad(obs_time):
     LOG.info("eph-file = " + eph_file)
 
     wrapper_home = SPA_HOME + "/gbad/wrapper/gbad"
-    cmdstr = ("%s/run aqua.gbad.pds %s aqua.gbad_att %s aqua.gbad_eph %s configurationfile %s" %
-              (wrapper_home, packetfile, att_file, eph_file, spa_config_file))
-    LOG.info("Command: " + cmdstr)
+    # cmdstr = ("%s/run aqua.gbad.pds %s aqua.gbad_att %s aqua.gbad_eph %s configurationfile %s" %
+    #           (wrapper_home, packetfile, att_file, eph_file, spa_config_file))
+    cmdl = ["%s/run" % wrapper_home, "aqua.gbad.pds",
+            packetfile, "aqua.gbad_att",  att_file,
+            "aqua.gbad_eph", eph_file,
+            "configurationfile", spa_config_file
+            ]
+    LOG.info("Command: " + str(cmdl))
     # Run the command:
-    # os.system(cmdstr)
-    modislvl1b_proc = Popen(cmdstr, shell=True,
+    modislvl1b_proc = Popen(cmdl, shell=False,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
