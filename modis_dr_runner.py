@@ -426,10 +426,11 @@ def run_aqua_l0l1(pdsfile):
     cmdstr = ("%s/run modis.pds %s sat %s modis.mxd01 %s modis.mxd03 %s gbad_eph %s gbad_att %s leapsec %s utcpole %s geocheck_threshold %s" %
               (wrapper_home, pdsfile, satellite, mod01_file, mod03_file,
                ephemeris, attitude, leapsec_name, utcpole_name, geocheck_threshold))
-    cmdstr = cmdstr.split(' ')
+    import shlex
+    cmdstr = shlex.split(cmdstr)
     LOG.debug("Run command: " + str(cmdstr))
     # Run the command:
-    modislvl1b_proc = Popen(*cmdstr, shell=False,
+    modislvl1b_proc = Popen(cmdstr, shell=False,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
@@ -471,9 +472,10 @@ def run_aqua_l0l1(pdsfile):
     cmdstr = ("%s/run modis.mxd01 %s modis.mxd03 %s modis_reflective_luts %s modis_emissive_luts %s modis_qa_luts %s modis.mxd021km %s modis.mxd02hkm %s modis.mxd02qkm %s" %
               (wrapper_home, mod01_file, mod03_file,
                refl_lut, emiss_lut, qa_lut, mod021km_file, mod02hkm_file, mod02qkm_file))
-    cmdstr = cmdstr.split(' ')
+    import shlex
+    cmdstr = shlex.split(cmdstr)
     LOG.debug("Run command: " + str(cmdstr))
-    modislvl1b_proc = Popen(*cmdstr, shell=False,
+    modislvl1b_proc = Popen(cmdstr, shell=False,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
