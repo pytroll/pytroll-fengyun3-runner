@@ -423,14 +423,33 @@ def run_aqua_l0l1(pdsfile):
     LOG.info("Level-1 filename: " + str(mod01_file))
     satellite = "Aqua"
     wrapper_home = os.path.join(SPA_HOME, "modisl1db/wrapper/l0tol1")
-    cmdstr = ("%s/run modis.pds %s sat %s modis.mxd01 %s modis.mxd03 %s gbad_eph %s gbad_att %s leapsec %s utcpole %s geocheck_threshold %s" %
-              (wrapper_home, pdsfile, satellite, mod01_file, mod03_file,
-               ephemeris, attitude, leapsec_name, utcpole_name, geocheck_threshold))
-    import shlex
-    cmdstr = shlex.split(cmdstr)
-    LOG.debug("Run command: " + str(cmdstr))
+    # cmdstr = ("%s/run modis.pds %s sat %s modis.mxd01 %s modis.mxd03 %s gbad_eph %s gbad_att %s leapsec %s utcpole %s geocheck_threshold %s" %
+    #           (wrapper_home, pdsfile, satellite, mod01_file, mod03_file,
+    #            ephemeris, attitude, leapsec_name, utcpole_name, geocheck_threshold))
+    # import shlex
+    # cmdstr = shlex.split(cmdstr)
+
+    cmdlist = ['%s/run modis.pds' % wrapper_home]
+    cmdlist.append(pdsfile)
+    cmdlist.append('sat')
+    cmdlist.append(satellite)
+    cmdlist.append('modis.mxd01')
+    cmdlist.append(mod01_file)
+    cmdlist.append('modis.mxd03')
+    cmdlist.append(mod03_file)
+    cmdlist.append('gbad_eph')
+    cmdlist.append(ephemeris)
+    cmdlist.append('gbad_att')
+    cmdlist.append(attitude)
+    cmdlist.append('leapsec')
+    cmdlist.append(leapsec_name)
+    cmdlist.append('utcpole')
+    cmdlist.append(utcpole_name)
+    cmdlist.append('geocheck_threshold')
+    cmdlist.append(geocheck_threshold)
+    LOG.debug("Run command: " + str(cmdlist))
     # Run the command:
-    modislvl1b_proc = Popen(cmdstr, shell=False,
+    modislvl1b_proc = Popen(cmdlist, shell=False,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
