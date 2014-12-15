@@ -392,7 +392,7 @@ def run_aqua_l0l1(pdsfile):
     level1b_500m_aqua = OPTIONS['level1b_500m_aqua']
 
     # Get the observation time from the filename as a datetime object:
-    bname = os.path.basename(pdsfile)
+    bname = os.path.basename(str(pdsfile))
     obstime = datetime.strptime(bname, filetype_aqua)
 
     # Get ephemeris and attitude names! FIXME!
@@ -430,7 +430,7 @@ def run_aqua_l0l1(pdsfile):
     # cmdstr = shlex.split(cmdstr)
 
     cmdlist = ['%s/run modis.pds' % wrapper_home]
-    cmdlist.append(pdsfile)
+    cmdlist.append(str(pdsfile))
     cmdlist.append('sat')
     cmdlist.append(satellite)
     cmdlist.append('modis.mxd01')
