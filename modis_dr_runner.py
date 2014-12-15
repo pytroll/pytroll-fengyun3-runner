@@ -380,7 +380,7 @@ def run_aqua_l0l1(pdsfile):
     from subprocess import Popen, PIPE, STDOUT
 
     # unicode -> ascii ignoring any non-ascii characters!:
-    pdsfile = pdsfile.encode('ascii', 'ignore')
+    #pdsfile = pdsfile.encode('ascii', 'ignore')
 
     working_dir = get_working_dir()
 
@@ -432,7 +432,8 @@ def run_aqua_l0l1(pdsfile):
     # import shlex
     # cmdstr = shlex.split(cmdstr)
 
-    cmdlist = ['%s/run modis.pds' % wrapper_home]
+    cmdlist = ['%s/run' % wrapper_home]
+    cmdlist.append('modis.pds')
     cmdlist.append(pdsfile)
     cmdlist.append('sat')
     cmdlist.append(satellite)
@@ -451,9 +452,11 @@ def run_aqua_l0l1(pdsfile):
     cmdlist.append('geocheck_threshold')
     cmdlist.append(str(geocheck_threshold))
     LOG.debug("Run command: " + str(cmdlist))
+    #my_env = os.environ.copy()
     # Run the command:
     modislvl1b_proc = Popen(cmdlist, shell=False,
                             cwd=working_dir,
+                            # env=my_env,
                             stderr=PIPE, stdout=PIPE)
 
     while True:
