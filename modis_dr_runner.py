@@ -267,6 +267,9 @@ def run_terra_l0l1(pdsfile):
     modislvl1b_proc.poll()
     modislvl1b_status = modislvl1b_proc.returncode
     LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
+    if modislvl1b_status != 0:
+        LOG.error("Failed in the Terra level-1 processing!")
+        return None
 
     # Now do the level1a-1b processing:
     lut_home = os.path.join(SPA_HOME, "modisl1db/algorithm/data/modist/cal")
@@ -300,9 +303,9 @@ def run_terra_l0l1(pdsfile):
     modislvl1b_proc.poll()
     modislvl1b_status = modislvl1b_proc.returncode
     LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
-
-    # Close working directory:
-    # os.close(fdwork)
+    if modislvl1b_status != 0:
+        LOG.error("Failed in the Terra level-1 processing!")
+        return None
 
     return retv
 
@@ -359,6 +362,11 @@ def run_aqua_gbad(obs_time):
         LOG.info(errline)
 
     modislvl1b_proc.poll()
+    modislvl1b_status = modislvl1b_proc.returncode
+    LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
+    if modislvl1b_status != 0:
+        LOG.error("Failed in the Aqua gbad processing!")
+        return None, None
 
     return att_file, eph_file
 
@@ -388,6 +396,9 @@ def run_aqua_l0l1(pdsfile):
     attitude, ephemeris = run_aqua_gbad(obstime)
     #ephemeris = "%s/P15409571540958154095911343000923001.eph" % ephemeris_home
     #attitude  = "%s/P15409571540958154095911343000923001.att" % attitude_home
+    if not attitude or not ephemeris:
+        LOG.error("Failed producing the attitude and/or the ephemeris file(s)")
+        return None
 
     leapsec_name = os.path.join(ETC_DIR, "leapsec.dat")
     utcpole_name = os.path.join(ETC_DIR, "utcpole.dat")
@@ -415,7 +426,7 @@ def run_aqua_l0l1(pdsfile):
     LOG.debug("Run command: " + str(cmdstr))
 
     # Run the command:
-    modislvl1b_proc = Popen(cmdstr, shell=True,
+    modislvl1b_proc = Popen(cmdstr, shell=False,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
@@ -434,6 +445,9 @@ def run_aqua_l0l1(pdsfile):
     modislvl1b_proc.poll()
     modislvl1b_status = modislvl1b_proc.returncode
     LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
+    if modislvl1b_status != 0:
+        LOG.error("Failed in the Aqua level-1 processing!")
+        return None
 
     # Now do the level1a-1b processing:
     lut_home = os.path.join(SPA_HOME, "modisl1db/algorithm/data/modisa/cal")
@@ -456,7 +470,7 @@ def run_aqua_l0l1(pdsfile):
                refl_lut, emiss_lut, qa_lut, mod021km_file, mod02hkm_file, mod02qkm_file))
     LOG.debug("Run command: " + str(cmdstr))
 
-    modislvl1b_proc = Popen(cmdstr, shell=True,
+    modislvl1b_proc = Popen(cmdstr, shell=False,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
@@ -475,6 +489,9 @@ def run_aqua_l0l1(pdsfile):
     modislvl1b_proc.poll()
     modislvl1b_status = modislvl1b_proc.returncode
     LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
+    if modislvl1b_status != 0:
+        LOG.error("Failed in the Aqua level-1 processing!")
+        return None
 
     retv = {'mod021km_file': mod021km_file,
             'mod02hkm_file': mod02hkm_file,
@@ -587,9 +604,14 @@ def start_modis_lvl1_processing(eos_files,
                 LOG.info("Orb = %d" % orbnum)
             LOG.info("File = " + str(urlobj.path))
             result_files = run_terra_l0l1(urlobj.path)
+            if not result_files:
+                LOG.error("No files produced...")
+                # Clean register: eos_files dict
+                LOG.info('Clean the internal eos_files register')
+                eos_files = {}
+                return eos_files
 
             LOG.info("Result files: " + str(result_files))
-
             # Assume everything has gone well!
             # Add intelligence to run-function. FIXME!
             # Now publish:
@@ -682,10 +704,16 @@ def start_modis_lvl1_processing(eos_files,
 
             LOG.info("File = " + str(modisfile))
             result_files = run_aqua_l0l1(modisfile)
-            LOG.debug("Result files: " + str(result_files))
+
             # Clean register: aqua_files dict
             LOG.info('Clean the internal eos_files register')
             eos_files = {}
+
+            if not result_files:
+                LOG.error("No files produced...")
+                return eos_files
+
+            LOG.debug("Result files: " + str(result_files))
 
             LOG.debug("Message:")
             LOG.debug(message)
@@ -703,9 +731,6 @@ def start_modis_lvl1_processing(eos_files,
             send_message(mypublisher, create_message(message.data,
                                                      l1a_file,
                                                      "1a"))
-
-    else:
-        return eos_files
 
     return eos_files
 
@@ -790,6 +815,7 @@ if __name__ == "__main__":
 
     LOG = logging.getLogger('modis_dr_runner')
     LOG.debug("Welcome to the modis_dr_runner!")
+    LOG.debug("SMHI_MODE = " + str(MODE))
 
     modis_live_runner()
 
