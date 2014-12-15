@@ -327,6 +327,8 @@ def run_aqua_gbad(obs_time):
 
     from subprocess import Popen, PIPE, STDOUT
 
+    working_dir = get_working_dir()
+
     level0_home = OPTIONS['level0_home']
     packetfile = os.path.join(level0_home,
                               obs_time.strftime(OPTIONS['packetfile_aqua']))
@@ -346,7 +348,8 @@ def run_aqua_gbad(obs_time):
     LOG.info("Command: " + cmdstr)
     # Run the command:
     # os.system(cmdstr)
-    modislvl1b_proc = Popen(cmdstr, shell=True,
+    modislvl1b_proc = Popen(cmdstr, shell=False,
+                            cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
     while True:
