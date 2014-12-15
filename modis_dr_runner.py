@@ -348,7 +348,7 @@ def run_aqua_gbad(obs_time):
     LOG.info("Command: " + cmdstr)
     # Run the command:
     # os.system(cmdstr)
-    modislvl1b_proc = Popen(cmdstr, shell=False,
+    modislvl1b_proc = Popen(cmdstr, shell=True,
                             cwd=working_dir,
                             stderr=PIPE, stdout=PIPE)
 
