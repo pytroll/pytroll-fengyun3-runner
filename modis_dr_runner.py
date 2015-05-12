@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2014
+# Copyright (c) 2013, 2014, 2015
 
 # Author(s):
 
@@ -672,13 +672,13 @@ def start_modis_lvl1_processing(eos_files,
             LOG.debug("Message data: " + str(message.data))
             send_message(mypublisher, create_message(message.data,
                                                      l1b_files,
-                                                     "1b"))
+                                                     "1B"))
 
             l1a_file = result_files['level1a_file']
 
             send_message(mypublisher, create_message(message.data,
                                                      l1a_file,
-                                                     "1a"))
+                                                     "1A"))
 
     elif (message.data['platform_name'] == "EOS-Aqua" and
           (message.data['sensor'] == 'modis' or
@@ -772,12 +772,12 @@ def start_modis_lvl1_processing(eos_files,
                                                        'mod02qkm_file']]
             send_message(mypublisher, create_message(message.data,
                                                      l1b_files,
-                                                     "1b"))
+                                                     "1B"))
 
             l1a_file = result_files['level1a_file']
             send_message(mypublisher, create_message(message.data,
                                                      l1a_file,
-                                                     "1a"))
+                                                     "1B"))
 
     return eos_files
 
