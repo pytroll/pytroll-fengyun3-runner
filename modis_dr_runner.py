@@ -843,7 +843,6 @@ if __name__ == "__main__":
     DAYS_BETWEEN_URL_DOWNLOAD = OPTIONS.get('days_between_url_download', 14)
     DAYS_KEEP_OLD_ETC_FILES = OPTIONS.get('days_keep_old_etc_files', 60)
     URL = OPTIONS['url_modis_navigation']
-    SERVERNAME = OPTIONS['servername']
 
     if args.log is not None:
         ndays = int(OPTIONS.get("log_rotation_days", 1))
