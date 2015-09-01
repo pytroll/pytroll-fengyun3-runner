@@ -27,10 +27,11 @@ pytroll messages from the Nimbus server (PDS file dispatch) and triggers
 processing on direct readout data
 """
 
-
 import os
 import glob
 import logging
+import socket
+from trollduction import get_local_ips
 
 #: Default time format
 _DEFAULT_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -597,10 +598,16 @@ def start_modis_lvl1_processing(eos_files,
     LOG.info("EOS files: " + str(eos_files))
     LOG.info("\tMessage:")
     LOG.info(message)
+
     urlobj = urlparse(message.data['uri'])
     LOG.info("Server = " + str(urlobj.netloc))
-    if urlobj.netloc != SERVERNAME:
+    server = urlobj.netloc
+    url_ip = socket.gethostbyname(server)
+    if urlobj.netloc and (url_ip not in get_local_ips()):
+        LOG.warning("Server %s not the current one: %s",
+                    str(server), socket.gethostname())
         return eos_files
+
     LOG.info("Ok... " + str(urlobj.netloc))
     LOG.info("Sat and Instrument: " + str(message.data['platform_name']) + " "
              + str(message.data['sensor']))
