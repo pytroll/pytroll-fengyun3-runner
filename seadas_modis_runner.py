@@ -609,16 +609,17 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
-        shutil.move(os.path.join(working_dir,
-                                 os.path.basename(mod01_file)),
-                    mod01_file)
+        fname_orig = os.path.join(working_dir, os.path.basename(mod01_file))
+        if os.path.exists(fname_orig):
+            shutil.move(fname_orig, mod01_file)
 
-        l1a_file = retv['level1a_file']
-        pubmsg = create_message(message.data,
-                                l1a_file,
-                                "1A")
-        LOG.info("Sending: " + str(pubmsg))
-        publish_q.put(pubmsg)
+            l1a_file = retv['level1a_file']
+            pubmsg = create_message(message.data,
+                                    l1a_file, "1A")
+            LOG.info("Sending: " + str(pubmsg))
+            publish_q.put(pubmsg)
+        else:
+            LOG.warning("Missing level-1a file! %s", fname_orig)
 
         # Next run the geolocation and the level-1b file:
 
@@ -692,15 +693,19 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
-        for fname in [mod021km_file, mod02hkm_file, mod02qkm_file]:
-            shutil.move(os.path.join(working_dir,
-                                     os.path.basename(fname)),
-                        fname)
+        l1b_files = []
+        for key in ['geo_file',
+                    'mod021km_file',
+                    'mod02hkm_file',
+                    'mod02qkm_file']:
+            fname_orig = os.path.join(working_dir, os.path.basename(retv[key]))
+            fname_dest = retv[key]
+            if os.path.exists(fname_orig):
+                shutil.move(fname_orig, fname_dest)
+                l1b_files.append(fname_dest)
+            else:
+                LOG.warning("Missing file: %s", fname_orig)
 
-        l1b_files = [retv[key] for key in ['geo_file',
-                                           'mod021km_file',
-                                           'mod02hkm_file',
-                                           'mod02qkm_file']]
         pubmsg = create_message(message.data, l1b_files, 'L1B')
         LOG.info("Sending: " + str(pubmsg))
         publish_q.put(pubmsg)
