@@ -512,8 +512,8 @@ def run_terra_l0l1(scene, job_id, publish_q):
         level1b_500m_terra = OPTIONS['level1b_500m_terra']
 
         # Get the observation time from the filename as a datetime object:
-        LOG.debug("pdsfile = %s", scene['pdsfile'])
-        bname = os.path.basename(scene['pdsfile'])
+        LOG.debug("pdsfilename = %s", scene['pdsfilename'])
+        bname = os.path.basename(scene['pdsfilename'])
         obstime = datetime.strptime(bname, filetype_terra)
         LOG.debug("bname = %s obstime = %s", str(bname), str(obstime))
 
