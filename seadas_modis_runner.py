@@ -550,8 +550,8 @@ def run_terra_l0l1(scene, job_id, publish_q):
         cmdl = ["%s/modis_L1A.py" % modisl1_home,
                 "--verbose",
                 "--mission=T",
-                "--startnudge=5",
-                "--stopnudge=5",
+                "--startnudge=15",
+                "--stopnudge=15",
                 "-o%s" % (os.path.basename(mod01_file)),
                 scene['pdsfilename']]
 
