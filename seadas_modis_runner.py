@@ -35,6 +35,7 @@ import shutil
 from urlparse import urlparse
 import posttroll.subscriber
 from posttroll.publisher import Publish
+from posttroll.message import Message
 import socket
 from trollduction import get_local_ips
 from datetime import datetime
@@ -253,7 +254,7 @@ def modis_live_runner():
 
             if platform_name == TERRA:
                 pool.apply_async(run_terra_l0l1,
-                                 (scene,
+                                 (scene, msg,
                                   jobs_dict[
                                       keyname],
                                   publisher_q))
@@ -272,6 +273,37 @@ def modis_live_runner():
 
     pub_thread.stop()
     listen_thread.stop()
+
+
+def create_message(mda, filename, level):
+    LOG.debug("mda: = " + str(mda))
+    LOG.debug("type(mda): " + str(type(mda)))
+    to_send = mda.copy()
+    if isinstance(filename, (list, tuple, set)):
+        del to_send['uri']
+        del to_send['uid']
+        to_send['dataset'] = [{'uri': 'file://' + fname,
+                               'uid': os.path.basename(fname)}
+                              for fname in filename]
+        mtype = 'dataset'
+    else:
+        to_send['uri'] = ('file://' + filename)
+        to_send['uid'] = os.path.basename(filename)
+        mtype = 'file'
+    to_send['format'] = 'EOS'
+    to_send['data_processing_level'] = level
+    to_send['type'] = 'HDF4'
+    to_send['sensor'] = 'modis'
+
+    message = Message('/'.join(('',
+                                str(to_send['format']),
+                                str(to_send['data_processing_level']),
+                                'norrköping',
+                                MODE,
+                                'polar'
+                                'direct_readout')),
+                      mtype, to_send).encode()
+    return message
 
 
 def ready2run(message, eosfiles, job_register, sceneid):
@@ -317,19 +349,6 @@ def ready2run(message, eosfiles, job_register, sceneid):
             # Do processing:
             LOG.info("Level-0 to lvl1 processing on Terra: Start..." +
                      " Start time = " + str(start_time))
-
-            # # Start checking and dowloading the luts (utcpole.dat and
-            # # leapsec.dat):
-            # LOG.info("Checking the modis luts and updating " +
-            #          "from internet if necessary!")
-            # fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
-            # if fresh:
-            #     LOG.info(
-            #         "Files in etc dir are fresh! No url downloading....")
-            # else:
-            #     LOG.warning("Files in etc are non existent or too old. " +
-            #                 "Start url fetch...")
-            #     update_utcpole_and_leapsec_files()
 
     if len(eosfiles[sceneid]) > 0:
         LOG.info("Files ready for MODIS level-1 runner: " +
@@ -485,7 +504,7 @@ def update_utcpole_and_leapsec_files():
     return
 
 
-def run_terra_l0l1(scene, job_id, publish_q):
+def run_terra_l0l1(scene, message, job_id, publish_q):
     """Process Terra MODIS level 0 PDS data to level 1a/1b"""
 
     from subprocess import Popen, PIPE, STDOUT
@@ -584,6 +603,13 @@ def run_terra_l0l1(scene, job_id, publish_q):
                                  os.path.basename(mod01_file)),
                     mod01_file)
 
+        l1a_file = retv['level1a_file']
+        pubmsg = create_message(message.data,
+                                l1a_file,
+                                "1A")
+        LOG.info("Sending: " + str(pubmsg))
+        publish_q.put(pubmsg)
+
         # Next run the geolocation and the level-1b file:
 
         # modis_GEO.py --verbose --enable-dem --entrained --disable-download
@@ -660,6 +686,22 @@ def run_terra_l0l1(scene, job_id, publish_q):
             shutil.move(os.path.join(working_dir,
                                      os.path.basename(fname)),
                         fname)
+
+        l1b_files = [retv[key] for key in ['geo_file',
+                                           'mod021km_file',
+                                           'mod02hkm_file',
+                                           'mod02qkm_file']]
+        pubmsg = create_message(message.data, l1b_files, 'L1B')
+        LOG.info("Sending: " + str(pubmsg))
+        publish_q.put(pubmsg)
+
+        if isinstance(job_id, datetime):
+            dt_ = datetime.utcnow() - job_id
+            LOG.info("Terra MODIS level-1b scene " + str(job_id) +
+                     " finished. It took: " + str(dt_))
+        else:
+            LOG.warning(
+                "Job entry is not a datetime instance: " + str(job_id))
 
         # Start checking and dowloading the luts (utcpole.dat and
         # leapsec.dat):
