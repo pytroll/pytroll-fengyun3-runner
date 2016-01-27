@@ -551,7 +551,8 @@ def run_terra_l0l1(scene, job_id, publish_q):
                 "--mission=T",
                 "--startnudge=5",
                 "--stopnudge=5",
-                scene['pdsfile']]
+                "-o %s" % (mod01_file),
+                scene['pdsfilename']]
 
         LOG.debug("Run command: " + str(cmdl))
         modislvl1b_proc = Popen(cmdl, shell=False,
@@ -572,6 +573,79 @@ def run_terra_l0l1(scene, job_id, publish_q):
 
         modislvl1b_proc.poll()
         modislvl1b_status = modislvl1b_proc.returncode
+        LOG.debug(
+            "Return code from modis lvl-1a processing = " + str(modislvl1b_status))
+        if modislvl1b_status != 0:
+            LOG.error("Failed in the Terra level-1 processing!")
+            return None
+
+        # Next run the geolocation and the level-1b file:
+
+        # modis_GEO.py --verbose --enable-dem --entrained --disable-download
+        # $level1a_file
+        cmdl = ["%s/modis_GEO.py" % modisl1_home,
+                "--verbose",
+                "--enable-dem", "--entrained", "--disable-download",
+                "-o %s" % (mod03_file),
+                mod01_file]
+
+        LOG.debug("Run command: " + str(cmdl))
+        modislvl1b_proc = Popen(cmdl, shell=False,
+                                cwd=working_dir,
+                                stderr=PIPE, stdout=PIPE)
+
+        while True:
+            line = modislvl1b_proc.stdout.readline()
+            if not line:
+                break
+            LOG.info(line)
+
+        while True:
+            errline = modislvl1b_proc.stderr.readline()
+            if not errline:
+                break
+            LOG.info(errline)
+
+        modislvl1b_proc.poll()
+        modislvl1b_status = modislvl1b_proc.returncode
+        LOG.debug(
+            "Return code from modis geo-loc processing = " + str(modislvl1b_status))
+        if modislvl1b_status != 0:
+            LOG.error("Failed in the Terra level-1 processing!")
+            return None
+
+        # modis_L1B.py --verbose $level1a_file $geo_file
+        cmdl = ["%s/modis_L1B.py" % modisl1_home,
+                "--verbose",
+                "-okm %s" % (mod021km_file),
+                "-hkm %s" % (mod02hkm_file),
+                "-qkm %s" % (mod02qkm_file),
+                mod01_file, mod03_file]
+
+        LOG.debug("Run command: " + str(cmdl))
+        modislvl1b_proc = Popen(cmdl, shell=False,
+                                cwd=working_dir,
+                                stderr=PIPE, stdout=PIPE)
+
+        while True:
+            line = modislvl1b_proc.stdout.readline()
+            if not line:
+                break
+            LOG.info(line)
+
+        while True:
+            errline = modislvl1b_proc.stderr.readline()
+            if not errline:
+                break
+            LOG.info(errline)
+
+        modislvl1b_proc.poll()
+        modislvl1b_status = modislvl1b_proc.returncode
+        LOG.debug(
+            "Return code from modis lvl1b processing = " + str(modislvl1b_status))
+        if modislvl1b_status != 0:
+            LOG.error("Failed in the Terra level-1 processing!")
+            return None
 
         # Start checking and dowloading the luts (utcpole.dat and
         # leapsec.dat):
