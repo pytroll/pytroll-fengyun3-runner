@@ -591,7 +591,7 @@ def run_terra_l0l1(scene, job_id, publish_q):
         cmdl = ["%s/modis_GEO.py" % modisl1_home,
                 "--verbose",
                 "--enable-dem", "--entrained", "--disable-download",
-                "-o %s" % (mod03_file),
+                "-o%s" % (os.path.basename(mod03_file)),
                 mod01_file]
 
         LOG.debug("Run command: " + str(cmdl))
@@ -619,12 +619,16 @@ def run_terra_l0l1(scene, job_id, publish_q):
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
+        shutil.move(os.path.join(working_dir,
+                                 os.path.basename(mod03_file)),
+                    mod03_file)
+
         # modis_L1B.py --verbose $level1a_file $geo_file
         cmdl = ["%s/modis_L1B.py" % modisl1_home,
                 "--verbose",
-                "-okm %s" % (mod021km_file),
-                "-hkm %s" % (mod02hkm_file),
-                "-qkm %s" % (mod02qkm_file),
+                "-okm %s" % os.path.basename(mod021km_file),
+                "-hkm %s" % os.path.basename(mod02hkm_file),
+                "-qkm %s" % os.path.basename(mod02qkm_file),
                 mod01_file, mod03_file]
 
         LOG.debug("Run command: " + str(cmdl))
@@ -651,6 +655,11 @@ def run_terra_l0l1(scene, job_id, publish_q):
         if modislvl1b_status != 0:
             LOG.error("Failed in the Terra level-1 processing!")
             return None
+
+        for fname in [mod021km_file, mod02hkm_file, mod02qkm_file]:
+            shutil.move(os.path.join(working_dir,
+                                     os.path.basename(fname)),
+                        fname)
 
         # Start checking and dowloading the luts (utcpole.dat and
         # leapsec.dat):
