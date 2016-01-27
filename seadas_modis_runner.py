@@ -256,6 +256,9 @@ def modis_live_runner():
                                   jobs_dict[
                                       keyname],
                                   publisher_q))
+            else:
+                LOG.debug(
+                    "Platform %s not supported yet...", str(platform_name))
 
             # Block any future run on this scene for x minutes from now
             # x = 5 minutes
@@ -487,6 +490,8 @@ def run_terra_l0l1(scene, job_id, publish_q):
     from subprocess import Popen, PIPE, STDOUT
     from glob import glob
 
+    LOG.debug("Inside run_terra_l0l1...")
+
     working_dir = get_working_dir()
 
     #fdwork = os.open(working_dir, os.O_RDONLY)
@@ -540,6 +545,24 @@ def run_terra_l0l1(scene, job_id, publish_q):
             scene['pdsfile']]
 
     LOG.debug("Run command: " + str(cmdl))
+    modislvl1b_proc = Popen(cmdl, shell=False,
+                            cwd=working_dir,
+                            stderr=PIPE, stdout=PIPE)
+
+    while True:
+        line = modislvl1b_proc.stdout.readline()
+        if not line:
+            break
+        LOG.info(line)
+
+    while True:
+        errline = modislvl1b_proc.stderr.readline()
+        if not errline:
+            break
+        LOG.info(errline)
+
+    modislvl1b_proc.poll()
+    modislvl1b_status = modislvl1b_proc.returncode
 
     # Start checking and dowloading the luts (utcpole.dat and
     # leapsec.dat):
