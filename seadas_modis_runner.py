@@ -580,7 +580,9 @@ def run_terra_l0l1(scene, job_id, publish_q):
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
-        shutil.move(os.path.basename(mod01_file), mod01_file)
+        shutil.move(os.path.join(working_dir,
+                                 os.path.basename(mod01_file)),
+                    mod01_file)
 
         # Next run the geolocation and the level-1b file:
 
