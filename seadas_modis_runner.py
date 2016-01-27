@@ -497,6 +497,8 @@ def run_terra_l0l1(scene, job_id, publish_q):
     #fdwork = os.open(working_dir, os.O_RDONLY)
     # os.fchdir(fdwork)
 
+    LOG.debug("Working dir = %s", str(working_dir))
+
     level1b_home = OPTIONS['level1b_home']
     filetype_terra = OPTIONS['filetype_terra']
     geofile_terra = OPTIONS['geofile_terra']
@@ -508,6 +510,7 @@ def run_terra_l0l1(scene, job_id, publish_q):
     # Get the observation time from the filename as a datetime object:
     bname = os.path.basename(scene['pdsfile'])
     obstime = datetime.strptime(bname, filetype_terra)
+    LOG.debug("bname = %s obstime = %s", str(bname), str(obstime))
 
     # level1_home
     proctime = datetime.now()
@@ -530,6 +533,7 @@ def run_terra_l0l1(scene, job_id, publish_q):
             'level1a_file': mod01_file,
             'geo_file': mod03_file}
 
+    LOG.debug("Do a file globbing to check for existing level-1b files:")
     mod01files = glob("%s/%s*hdf" % (level1b_home, firstpart))
     if len(mod01files) > 0:
         LOG.warning(
