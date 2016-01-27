@@ -67,14 +67,22 @@ MODISFILE_AQUA_PRFX = "P1540064AAAAAAAAAAAAAA"
 MODISFILE_TERRA_PRFX = "P0420064AAAAAAAAAAAAAA"
 
 
-def reset_job_registry(objdict, key):
+def reset_job_registry(objdict, eosfiles, key):
     """Remove job key from registry"""
     LOG.debug("Release/reset job-key " + str(key) + " from job registry")
     if key in objdict:
         objdict.pop(key)
     else:
         LOG.warning("Nothing to reset/release - " +
-                    "Register didn't contain any entry matching: " +
+                    "Job registry didn't contain any entry matching: " +
+                    str(key))
+
+    LOG.debug("Release/reset key " + str(key) + " from eosfiles registry")
+    if key in eosfiles:
+        eosfiles.pop(key)
+    else:
+        LOG.warning("Nothing to reset/release - " +
+                    "EOS-files registry didn't contain any entry matching: " +
                     str(key))
     return
 
@@ -265,8 +273,10 @@ def modis_live_runner():
             # Block any future run on this scene for x minutes from now
             # x = 5 minutes
             thread_job_registry = threading.Timer(
-                5 * 60.0, reset_job_registry, args=(jobs_dict, keyname))
+                5 * 60.0, reset_job_registry, args=(jobs_dict, eos_files, keyname))
             thread_job_registry.start()
+
+        LOG.debug("Eos-file registry: %s", str(eos_files))
 
     pool.close()
     pool.join()
@@ -316,7 +326,7 @@ def ready2run(message, eosfiles, job_register, sceneid):
     LOG.debug("Job register = " + str(job_register))
     if sceneid in job_register and job_register[sceneid]:
         LOG.debug("Processing of scene " + str(sceneid) +
-                  " have already been launched...")
+                  " has already been launched...")
         return False
 
     if sceneid not in eosfiles:
