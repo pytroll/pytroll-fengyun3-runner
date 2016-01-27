@@ -65,6 +65,18 @@ MODISFILE_AQUA_PRFX = "P1540064AAAAAAAAAAAAAA"
 MODISFILE_TERRA_PRFX = "P0420064AAAAAAAAAAAAAA"
 
 
+def reset_job_registry(objdict, key):
+    """Remove job key from registry"""
+    LOG.debug("Release/reset job-key " + str(key) + " from job registry")
+    if key in objdict:
+        objdict.pop(key)
+    else:
+        LOG.warning("Nothing to reset/release - " +
+                    "Register didn't contain any entry matching: " +
+                    str(key))
+    return
+
+
 class FilePublisher(threading.Thread):
 
     """A publisher for the MODIS level-1 files. Picks up the return value
@@ -162,6 +174,19 @@ def modis_live_runner():
     LOG.info("*** Start the runner for the MODIS level-1 processing")
     LOG.debug("os.environ = " + str(os.environ))
 
+    # Start checking and dowloading the luts (utcpole.dat and
+    # leapsec.dat):
+    LOG.info("Checking the modis luts and updating " +
+             "from internet if necessary!")
+    fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
+    if fresh:
+        LOG.info(
+            "Files in etc dir are fresh! No url downloading....")
+    else:
+        LOG.warning("Files in etc are non existent or too old. " +
+                    "Start url fetch...")
+        update_utcpole_and_leapsec_files()
+
     pool = Pool(processes=6, maxtasksperchild=1)
     manager = Manager()
     listener_q = manager.Queue()
@@ -232,6 +257,12 @@ def modis_live_runner():
                                       keyname],
                                   publisher_q))
 
+            # Block any future run on this scene for x minutes from now
+            # x = 5 minutes
+            thread_job_registry = threading.Timer(
+                5 * 60.0, reset_job_registry, args=(jobs_dict, keyname))
+            thread_job_registry.start()
+
     pool.close()
     pool.join()
 
@@ -280,7 +311,7 @@ def ready2run(message, eosfiles, job_register, sceneid):
             eosfiles[sceneid].append(urlobj.path)
 
             # Do processing:
-            LOG.info("Level-0 to lvl1 processing on terra start!" +
+            LOG.info("Level-0 to lvl1 processing on Terra: Start..." +
                      " Start time = " + str(start_time))
 
             # # Start checking and dowloading the luts (utcpole.dat and
@@ -296,11 +327,14 @@ def ready2run(message, eosfiles, job_register, sceneid):
             #                 "Start url fetch...")
             #     update_utcpole_and_leapsec_files()
 
-    LOG.info("Files ready for MODIS level-1 runner: " +
-             str(eosfiles[sceneid]))
+    if len(eosfiles[sceneid]) > 0:
+        LOG.info("Files ready for MODIS level-1 runner: " +
+                 str(eosfiles[sceneid]))
 
-    job_register[sceneid] = datetime.utcnow()
-    return True
+        job_register[sceneid] = datetime.utcnow()
+        return True
+    else:
+        return False
 
 
 def get_working_dir():
@@ -314,6 +348,137 @@ def get_working_dir():
             LOG.info("Will use /tmp")
 
     return working_dir
+
+
+def clean_utcpole_and_leapsec_files(thr_days=60):
+    """Clean any old *leapsec.dat* and *utcpole.dat* backup files, older than
+    *thr_days* old
+
+    """
+    from glob import glob
+    from datetime import datetime, timedelta
+    import os
+
+    now = datetime.utcnow()
+    deltat = timedelta(days=int(thr_days))
+
+    # Make the list of files to clean:
+    flist = glob(os.path.join(ETC_DIR, '*.dat_*'))
+    for filename in flist:
+        lastpart = os.path.basename(filename).split('dat_')[1]
+        tobj = datetime.strptime(lastpart, "%Y%m%d%H%M")
+        if (now - tobj) > deltat:
+            LOG.info("File to old, cleaning: %s " % filename)
+            os.remove(filename)
+
+    return
+
+
+def check_utcpole_and_leapsec_files(thr_days=14):
+    """Check if the files *leapsec.dat* and *utcpole.dat* are available in the
+    etc directory and check if they are fresh.
+    Return True if fresh/new files exists, otherwise False
+
+    """
+
+    from glob import glob
+    from datetime import datetime, timedelta
+
+    now = datetime.utcnow()
+    tdelta = timedelta(days=int(thr_days))
+
+    files_ok = True
+    for bname in NAVIGATION_HELPER_FILES:
+        LOG.info("File " + str(bname) + "...")
+        filename = os.path.join(ETC_DIR, bname)
+        if os.path.exists(filename):
+            # Check how old it is:
+            realpath = os.path.realpath(filename)
+            # Get the timestamp in the file name:
+            try:
+                tstamp = os.path.basename(realpath).split('.dat_')[1]
+            except IndexError:
+                files_ok = False
+                break
+            tobj = datetime.strptime(tstamp, "%Y%m%d%H%M")
+
+            if (now - tobj) > tdelta:
+                LOG.info("File too old! File=%s " % filename)
+                files_ok = False
+                break
+        else:
+            LOG.info("No navigation helper file: %s" % filename)
+            files_ok = False
+            break
+
+    return files_ok
+
+
+def update_utcpole_and_leapsec_files():
+    """
+    Function to update the ancillary data files *leapsec.dat* and
+    *utcpole.dat* used in the navigation of MODIS direct readout data.
+
+    These files need to be updated at least once every 2nd week, in order to
+    achieve the best possible navigation.
+
+    """
+    import urllib2
+    import os
+    import sys
+    from datetime import datetime
+
+    # Start cleaning any possible old files:
+    clean_utcpole_and_leapsec_files(DAYS_KEEP_OLD_ETC_FILES)
+
+    try:
+        usock = urllib2.urlopen(URL)
+    except urllib2.URLError:
+        LOG.warning('Failed opening url: ' + URL)
+        return
+    else:
+        usock.close()
+
+    LOG.info("Start downloading....")
+    now = datetime.utcnow()
+    timestamp = now.strftime('%Y%m%d%H%M')
+    for filename in NAVIGATION_HELPER_FILES:
+        try:
+            usock = urllib2.urlopen(URL + filename)
+        except urllib2.HTTPError:
+            LOG.warning("Failed opening file " + filename)
+            continue
+
+        data = usock.read()
+        usock.close()
+        LOG.info("Data retrieved from url...")
+
+        # I store the files with a timestamp attached, in order not to remove
+        # the existing files. In case something gets wrong in the download, we
+        # can handle this by not changing the sym-links below:
+        newname = filename + '_' + timestamp
+        outfile = os.path.join(ETC_DIR, newname)
+        linkfile = os.path.join(ETC_DIR, filename)
+        fd = open(outfile, 'w')
+        fd.write(data)
+        fd.close()
+
+        LOG.info("Data written to file " + outfile)
+        # Here we could make a check on the sanity of the downloaded files:
+        # TODO!
+
+        # Update the symlinks (assuming the files are okay):
+        LOG.debug("Adding symlink %s -> %s", linkfile, outfile)
+        if os.path.islink(linkfile):
+            LOG.debug("Unlinking %s", linkfile)
+            os.unlink(linkfile)
+
+        try:
+            os.symlink(outfile, linkfile)
+        except OSError as err:
+            LOG.warning(str(err))
+
+    return
 
 
 def run_terra_l0l1(scene, job_id, publish_q):
@@ -375,6 +540,19 @@ def run_terra_l0l1(scene, job_id, publish_q):
             scene['pdsfile']]
 
     LOG.debug("Run command: " + str(cmdl))
+
+    # Start checking and dowloading the luts (utcpole.dat and
+    # leapsec.dat):
+    LOG.info("Checking the modis luts and updating " +
+             "from internet if necessary!")
+    fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
+    if fresh:
+        LOG.info(
+            "Files in etc dir are fresh! No url downloading....")
+    else:
+        LOG.warning("Files in etc are non existent or too old. " +
+                    "Start url fetch...")
+        update_utcpole_and_leapsec_files()
 
 
 if __name__ == "__main__":
