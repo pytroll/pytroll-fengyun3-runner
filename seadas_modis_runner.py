@@ -25,12 +25,13 @@ from DRL as well to generate attitude and ephemeris data for Aqua.
 
 """
 
-import os
 import ConfigParser
 import logging
 LOG = logging.getLogger(__name__)
 
+import os
 import sys
+import shutil
 from urlparse import urlparse
 import posttroll.subscriber
 from posttroll.publisher import Publish
@@ -551,7 +552,7 @@ def run_terra_l0l1(scene, job_id, publish_q):
                 "--mission=T",
                 "--startnudge=5",
                 "--stopnudge=5",
-                "-o %s" % (mod01_file),
+                "-o %s" % (os.path.basename(mod01_file)),
                 scene['pdsfilename']]
 
         LOG.debug("Run command: " + str(cmdl))
@@ -571,13 +572,15 @@ def run_terra_l0l1(scene, job_id, publish_q):
                 break
             LOG.info(errline)
 
-        modislvl1b_proc.poll()
+        # modislvl1b_proc.poll()
         modislvl1b_status = modislvl1b_proc.returncode
         LOG.debug(
             "Return code from modis lvl-1a processing = " + str(modislvl1b_status))
         if modislvl1b_status != 0:
             LOG.error("Failed in the Terra level-1 processing!")
             return None
+
+        shutil.move(os.path.basename(mod01_file), mod01_file)
 
         # Next run the geolocation and the level-1b file:
 
