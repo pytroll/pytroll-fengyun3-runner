@@ -490,97 +490,105 @@ def run_terra_l0l1(scene, job_id, publish_q):
     from subprocess import Popen, PIPE, STDOUT
     from glob import glob
 
-    LOG.debug("Inside run_terra_l0l1...")
+    try:
 
-    working_dir = get_working_dir()
+        LOG.debug("Inside run_terra_l0l1...")
 
-    #fdwork = os.open(working_dir, os.O_RDONLY)
-    # os.fchdir(fdwork)
+        working_dir = get_working_dir()
 
-    LOG.debug("Working dir = %s", str(working_dir))
+        #fdwork = os.open(working_dir, os.O_RDONLY)
+        # os.fchdir(fdwork)
 
-    level1b_home = OPTIONS['level1b_home']
-    filetype_terra = OPTIONS['filetype_terra']
-    geofile_terra = OPTIONS['geofile_terra']
-    level1a_terra = OPTIONS['level1a_terra']
-    level1b_terra = OPTIONS['level1b_terra']
-    level1b_250m_terra = OPTIONS['level1b_250m_terra']
-    level1b_500m_terra = OPTIONS['level1b_500m_terra']
+        LOG.debug("Working dir = %s", str(working_dir))
 
-    # Get the observation time from the filename as a datetime object:
-    bname = os.path.basename(scene['pdsfile'])
-    obstime = datetime.strptime(bname, filetype_terra)
-    LOG.debug("bname = %s obstime = %s", str(bname), str(obstime))
+        level1b_home = OPTIONS['level1b_home']
+        LOG.debug("level1b_home = %s", level1b_home)
+        filetype_terra = OPTIONS['filetype_terra']
+        LOG.debug("filetype_terra = %s", OPTIONS['filetype_terra'])
+        geofile_terra = OPTIONS['geofile_terra']
+        level1a_terra = OPTIONS['level1a_terra']
+        level1b_terra = OPTIONS['level1b_terra']
+        level1b_250m_terra = OPTIONS['level1b_250m_terra']
+        level1b_500m_terra = OPTIONS['level1b_500m_terra']
 
-    # level1_home
-    proctime = datetime.now()
-    lastpart = proctime.strftime("%Y%j%H%M%S.hdf")
-    firstpart = obstime.strftime(level1b_terra)
-    mod021km_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
-    firstpart = obstime.strftime(level1b_250m_terra)
-    mod02qkm_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
-    firstpart = obstime.strftime(level1b_500m_terra)
-    mod02hkm_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
-    lastpart = proctime.strftime("%Y%j%H%M%S.hdf")
-    firstpart = obstime.strftime(level1a_terra)
-    mod01_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
-    firstpart = obstime.strftime(geofile_terra)
-    mod03_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
+        # Get the observation time from the filename as a datetime object:
+        LOG.debug("pdsfile = %s", scene['pdsfile'])
+        bname = os.path.basename(scene['pdsfile'])
+        obstime = datetime.strptime(bname, filetype_terra)
+        LOG.debug("bname = %s obstime = %s", str(bname), str(obstime))
 
-    retv = {'mod021km_file': mod021km_file,
-            'mod02hkm_file': mod02hkm_file,
-            'mod02qkm_file': mod02qkm_file,
-            'level1a_file': mod01_file,
-            'geo_file': mod03_file}
+        # level1_home
+        proctime = datetime.now()
+        lastpart = proctime.strftime("%Y%j%H%M%S.hdf")
+        firstpart = obstime.strftime(level1b_terra)
+        mod021km_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
+        firstpart = obstime.strftime(level1b_250m_terra)
+        mod02qkm_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
+        firstpart = obstime.strftime(level1b_500m_terra)
+        mod02hkm_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
+        lastpart = proctime.strftime("%Y%j%H%M%S.hdf")
+        firstpart = obstime.strftime(level1a_terra)
+        mod01_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
+        firstpart = obstime.strftime(geofile_terra)
+        mod03_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
 
-    LOG.debug("Do a file globbing to check for existing level-1b files:")
-    mod01files = glob("%s/%s*hdf" % (level1b_home, firstpart))
-    if len(mod01files) > 0:
-        LOG.warning(
-            "Level 1 file for this scene already exists: %s", mod01files[0])
+        retv = {'mod021km_file': mod021km_file,
+                'mod02hkm_file': mod02hkm_file,
+                'mod02qkm_file': mod02qkm_file,
+                'level1a_file': mod01_file,
+                'geo_file': mod03_file}
 
-    LOG.info("Level-1 filename: " + str(mod01_file))
-    modisl1_home = os.path.join(SEADAS_HOME, "ocssw/run/scripts")
-    cmdl = ["%s/modis_L1A.py" % modisl1_home,
-            "--verbose",
-            "--mission=T",
-            "--startnudge=5",
-            "--stopnudge=5",
-            scene['pdsfile']]
+        LOG.debug("Do a file globbing to check for existing level-1b files:")
+        mod01files = glob("%s/%s*hdf" % (level1b_home, firstpart))
+        if len(mod01files) > 0:
+            LOG.warning(
+                "Level 1 file for this scene already exists: %s", mod01files[0])
 
-    LOG.debug("Run command: " + str(cmdl))
-    modislvl1b_proc = Popen(cmdl, shell=False,
-                            cwd=working_dir,
-                            stderr=PIPE, stdout=PIPE)
+        LOG.info("Level-1 filename: " + str(mod01_file))
+        modisl1_home = os.path.join(SEADAS_HOME, "ocssw/run/scripts")
+        cmdl = ["%s/modis_L1A.py" % modisl1_home,
+                "--verbose",
+                "--mission=T",
+                "--startnudge=5",
+                "--stopnudge=5",
+                scene['pdsfile']]
 
-    while True:
-        line = modislvl1b_proc.stdout.readline()
-        if not line:
-            break
-        LOG.info(line)
+        LOG.debug("Run command: " + str(cmdl))
+        modislvl1b_proc = Popen(cmdl, shell=False,
+                                cwd=working_dir,
+                                stderr=PIPE, stdout=PIPE)
 
-    while True:
-        errline = modislvl1b_proc.stderr.readline()
-        if not errline:
-            break
-        LOG.info(errline)
+        while True:
+            line = modislvl1b_proc.stdout.readline()
+            if not line:
+                break
+            LOG.info(line)
 
-    modislvl1b_proc.poll()
-    modislvl1b_status = modislvl1b_proc.returncode
+        while True:
+            errline = modislvl1b_proc.stderr.readline()
+            if not errline:
+                break
+            LOG.info(errline)
 
-    # Start checking and dowloading the luts (utcpole.dat and
-    # leapsec.dat):
-    LOG.info("Checking the modis luts and updating " +
-             "from internet if necessary!")
-    fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
-    if fresh:
-        LOG.info(
-            "Files in etc dir are fresh! No url downloading....")
-    else:
-        LOG.warning("Files in etc are non existent or too old. " +
-                    "Start url fetch...")
-        update_utcpole_and_leapsec_files()
+        modislvl1b_proc.poll()
+        modislvl1b_status = modislvl1b_proc.returncode
 
+        # Start checking and dowloading the luts (utcpole.dat and
+        # leapsec.dat):
+        LOG.info("Checking the modis luts and updating " +
+                 "from internet if necessary!")
+        fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
+        if fresh:
+            LOG.info(
+                "Files in etc dir are fresh! No url downloading....")
+        else:
+            LOG.warning("Files in etc are non existent or too old. " +
+                        "Start url fetch...")
+            update_utcpole_and_leapsec_files()
+
+    except:
+        LOG.exception('Failed in run_terra_l0l1...')
+        raise
 
 if __name__ == "__main__":
 
