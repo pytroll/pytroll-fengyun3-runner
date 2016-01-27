@@ -626,9 +626,9 @@ def run_terra_l0l1(scene, job_id, publish_q):
         # modis_L1B.py --verbose $level1a_file $geo_file
         cmdl = ["%s/modis_L1B.py" % modisl1_home,
                 "--verbose",
-                "-okm %s" % os.path.basename(mod021km_file),
-                "-hkm %s" % os.path.basename(mod02hkm_file),
-                "-qkm %s" % os.path.basename(mod02qkm_file),
+                "--okm=%s" % os.path.basename(mod021km_file),
+                "--hkm=%s" % os.path.basename(mod02hkm_file),
+                "--qkm=%s" % os.path.basename(mod02qkm_file),
                 mod01_file, mod03_file]
 
         LOG.debug("Run command: " + str(cmdl))
