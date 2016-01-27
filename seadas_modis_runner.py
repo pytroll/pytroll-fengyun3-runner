@@ -552,7 +552,7 @@ def run_terra_l0l1(scene, job_id, publish_q):
                 "--mission=T",
                 "--startnudge=5",
                 "--stopnudge=5",
-                "-o %s" % (os.path.basename(mod01_file)),
+                "-o%s" % (os.path.basename(mod01_file)),
                 scene['pdsfilename']]
 
         LOG.debug("Run command: " + str(cmdl))
@@ -572,7 +572,7 @@ def run_terra_l0l1(scene, job_id, publish_q):
                 break
             LOG.info(errline)
 
-        # modislvl1b_proc.poll()
+        modislvl1b_proc.poll()
         modislvl1b_status = modislvl1b_proc.returncode
         LOG.debug(
             "Return code from modis lvl-1a processing = " + str(modislvl1b_status))
