@@ -531,6 +531,9 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
 
         LOG.debug("Working dir = %s", str(working_dir))
 
+        startnudge = int(OPTIONS['startnudge'])
+        endnudge = int(OPTIONS['endnudge'])
+
         level1b_home = OPTIONS['level1b_home']
         LOG.debug("level1b_home = %s", level1b_home)
         filetype_terra = OPTIONS['filetype_terra']
@@ -579,8 +582,8 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
         cmdl = ["%s/modis_L1A.py" % modisl1_home,
                 "--verbose",
                 "--mission=T",
-                "--startnudge=15",
-                "--stopnudge=15",
+                "--startnudge=%d" % startnudge,
+                "--stopnudge=%d" % endnudge,
                 "-o%s" % (os.path.basename(mod01_file)),
                 scene['pdsfilename']]
 
@@ -652,7 +655,9 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
         modislvl1b_status = modislvl1b_proc.returncode
         LOG.debug(
             "Return code from modis geo-loc processing = " + str(modislvl1b_status))
-        if modislvl1b_status != 0:
+        # Apparently a return code of 1 is okay...
+        # Verify which return codes are ok! FIXME!
+        if modislvl1b_status not in [0, 1]:
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
