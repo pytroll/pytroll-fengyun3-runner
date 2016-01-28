@@ -706,7 +706,7 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
             else:
                 LOG.warning("Missing file: %s", fname_orig)
 
-        pubmsg = create_message(message.data, l1b_files, 'L1B')
+        pubmsg = create_message(message.data, l1b_files, '1B')
         LOG.info("Sending: " + str(pubmsg))
         publish_q.put(pubmsg)
 
