@@ -656,9 +656,15 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
-        shutil.move(os.path.join(working_dir,
-                                 os.path.basename(mod03_file)),
-                    mod03_file)
+        l1b_files = []
+        fname_orig = os.path.join(
+            working_dir, os.path.basename(retv['geo_file']))
+        fname_dest = retv['geo_file']
+        if os.path.exists(fname_orig):
+            shutil.move(fname_orig, fname_dest)
+            l1b_files.append(fname_dest)
+        else:
+            LOG.warning("Missing file: %s", fname_orig)
 
         # modis_L1B.py --verbose $level1a_file $geo_file
         cmdl = ["%s/modis_L1B.py" % modisl1_home,
@@ -693,7 +699,6 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
-        l1b_files = []
         for key in ['geo_file',
                     'mod021km_file',
                     'mod02hkm_file',
