@@ -422,7 +422,7 @@ def run_aqua_gbad(obs_time):
 
     att_dir = OPTIONS['attitude_home']
     eph_dir = OPTIONS['ephemeris_home']
-    spa_config_file = OPTIONS['spa_config_file']
+    spa_config_file = os.path.join(SPA_HOME, "smhi_configfile")
     att_file = os.path.basename(packetfile).split('.PDS')[0] + '.att'
     att_file = os.path.join(att_dir, att_file)
     eph_file = os.path.basename(packetfile).split('.PDS')[0] + '.eph'
