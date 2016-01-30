@@ -46,6 +46,8 @@ from Queue import Empty
 EOS_SATELLITES = ['EOS-Terra', 'EOS-Aqua']
 TERRA = 'EOS-Terra'
 AQUA = 'EOS-Aqua'
+MISSIONS = {'T': 'terra',
+            'A': 'aqua'}
 
 #: Default time format
 _DEFAULT_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -55,6 +57,9 @@ _DEFAULT_LOG_FORMAT = '[%(levelname)s: %(asctime)s : %(name)s] %(message)s'
 SEADAS_HOME = os.environ.get("SEADAS_HOME", '')
 APPL_HOME = os.environ.get('MODIS_LVL1PROC', '')
 ETC_DIR = os.path.join(SEADAS_HOME, 'ocssw/run/var/modis')
+
+SPA_HOME = os.environ.get("SPA_HOME", '')
+#ETC_DIR = os.path.join(SPA_HOME, 'etc')
 
 NAVIGATION_HELPER_FILES = ['utcpole.dat', 'leapsec.dat']
 
@@ -250,18 +255,22 @@ def modis_live_runner():
         if status:
             # Run
             LOG.info("Ready to run...")
-            urlobj = urlparse(msg.data['uri'])
-            path, fname = os.path.split(urlobj.path)
-            LOG.debug("path " + str(path) + " filename = " + str(fname))
+            LOG.debug("Modisfile = %s", eos_files[keyname]['modisfile'])
+            LOG.debug("Packetfile = %s", eos_files[keyname]['packetfile'])
 
             scene = {'platform_name': platform_name,
                      'orbit_number': orbit_number,
                      'starttime': start_time, 'endtime': end_time,
                      'sensor': sensor,
-                     'pdsfilename': urlobj.path}
+                     'modisfilename': eos_files[keyname]['modisfile'],
+                     'packetfilename': eos_files[keyname]['packetfile']}
 
-            if platform_name == TERRA:
-                pool.apply_async(run_terra_l0l1,
+            if platform_name in [TERRA, AQUA]:
+                # Do processing:
+                LOG.info("Level-0 to lvl1 processing on " +
+                         "Terra/Aqua MODIS: Start..." +
+                         " Start time = " + str(start_time))
+                pool.apply_async(run_terra_aqua_l0l1,
                                  (scene, msg,
                                   jobs_dict[
                                       keyname],
@@ -330,7 +339,7 @@ def ready2run(message, eosfiles, job_register, sceneid):
         return False
 
     if sceneid not in eosfiles:
-        eosfiles[sceneid] = []
+        eosfiles[sceneid] = {}
 
     urlobj = urlparse(message.data['uri'])
 
@@ -354,13 +363,30 @@ def ready2run(message, eosfiles, job_register, sceneid):
                             urlobj.path)
                 return False
 
-            eosfiles[sceneid].append(urlobj.path)
+            eosfiles[sceneid]['modisfile'] = urlobj.path
+            eosfiles[sceneid]['packetfile'] = ''
 
-            # Do processing:
-            LOG.info("Level-0 to lvl1 processing on Terra: Start..." +
-                     " Start time = " + str(start_time))
+    elif (message.data['platform_name'] == "EOS-Aqua" and
+          message.data['sensor'] == 'modis'):
 
-    if len(eosfiles[sceneid]) > 0:
+        path, fname = os.path.split(urlobj.path)
+        LOG.debug("path " + str(path) + " filename = " + str(fname))
+        if ((fname.find(MODISFILE_AQUA_PRFX) == 0 or
+             fname.find(PACKETFILE_AQUA_PRFX) == 0) and
+                fname.endswith('001.PDS')):
+            # Check if the file exists:
+            if not os.path.exists(urlobj.path):
+                LOG.warning("File is reported to be dispatched " +
+                            "but is not there! File = " +
+                            urlobj.path)
+                return False
+
+            if fname.find(MODISFILE_AQUA_PRFX) == 0:
+                eosfiles[sceneid]['modisfile'] = urlobj.path
+            else:
+                eosfiles[sceneid]['packetfile'] = urlobj.path
+
+    if 'modisfile' in eosfiles[sceneid] and 'packetfile' in eosfiles[sceneid]:
         LOG.info("Files ready for MODIS level-1 runner: " +
                  str(eosfiles[sceneid]))
 
@@ -381,6 +407,60 @@ def get_working_dir():
             LOG.info("Will use /tmp")
 
     return working_dir
+
+
+def run_aqua_gbad(obs_time):
+    """Run the gbad for aqua"""
+
+    from subprocess import Popen, PIPE
+
+    working_dir = get_working_dir()
+
+    level0_home = OPTIONS['level0_home']
+    packetfile = os.path.join(level0_home,
+                              obs_time.strftime(OPTIONS['packetfile_aqua']))
+
+    att_dir = OPTIONS['attitude_home']
+    eph_dir = OPTIONS['ephemeris_home']
+    spa_config_file = OPTIONS['spa_config_file']
+    att_file = os.path.basename(packetfile).split('.PDS')[0] + '.att'
+    att_file = os.path.join(att_dir, att_file)
+    eph_file = os.path.basename(packetfile).split('.PDS')[0] + '.eph'
+    eph_file = os.path.join(eph_dir, eph_file)
+    LOG.info("eph-file = " + eph_file)
+
+    wrapper_home = SPA_HOME + "/wrapper/gbad"
+    cmdl = ["%s/run" % wrapper_home, "aqua.gbad.pds",
+            packetfile, "aqua.gbad_att",  att_file,
+            "aqua.gbad_eph", eph_file,
+            "configurationfile", spa_config_file
+            ]
+    LOG.info("Command: " + str(cmdl))
+    # Run the command:
+    modislvl1b_proc = Popen(cmdl, shell=False,
+                            cwd=working_dir,
+                            stderr=PIPE, stdout=PIPE)
+
+    while True:
+        line = modislvl1b_proc.stdout.readline()
+        if not line:
+            break
+        LOG.info(line)
+
+    while True:
+        errline = modislvl1b_proc.stderr.readline()
+        if not errline:
+            break
+        LOG.info(errline)
+
+    modislvl1b_proc.poll()
+    modislvl1b_status = modislvl1b_proc.returncode
+    LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
+    if modislvl1b_status != 0:
+        LOG.error("Failed in the Aqua gbad processing!")
+        return None, None
+
+    return att_file, eph_file
 
 
 def clean_utcpole_and_leapsec_files(thr_days=60):
@@ -514,22 +594,23 @@ def update_utcpole_and_leapsec_files():
     return
 
 
-def run_terra_l0l1(scene, message, job_id, publish_q):
-    """Process Terra MODIS level 0 PDS data to level 1a/1b"""
+def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
+    """Process Terra/Aqua MODIS level 0 PDS data to level 1a/1b"""
 
-    from subprocess import Popen, PIPE, STDOUT
+    from subprocess import Popen, PIPE
     from glob import glob
 
     try:
 
-        LOG.debug("Inside run_terra_l0l1...")
+        LOG.debug("Inside run_terra_aqua_l0l1...")
 
         working_dir = get_working_dir()
-
-        #fdwork = os.open(working_dir, os.O_RDONLY)
-        # os.fchdir(fdwork)
-
         LOG.debug("Working dir = %s", str(working_dir))
+
+        if scene['platform_name'] == TERRA:
+            mission = 'T'
+        else:
+            mission = 'A'
 
         startnudge = int(OPTIONS['startnudge'])
         endnudge = int(OPTIONS['endnudge'])
@@ -538,31 +619,58 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
         LOG.debug("level1b_home = %s", level1b_home)
         filetype_terra = OPTIONS['filetype_terra']
         LOG.debug("filetype_terra = %s", OPTIONS['filetype_terra'])
-        geofile_terra = OPTIONS['geofile_terra']
+        geofiles = {}
+        geofiles[mission] = OPTIONS['geofile_%s' % MISSIONS[mission]]
         level1a_terra = OPTIONS['level1a_terra']
         level1b_terra = OPTIONS['level1b_terra']
         level1b_250m_terra = OPTIONS['level1b_250m_terra']
         level1b_500m_terra = OPTIONS['level1b_500m_terra']
 
+        filetype_aqua = OPTIONS['filetype_aqua']
+        LOG.debug("filetype_aqua = %s", str(filetype_aqua))
+        level1a_aqua = OPTIONS['level1a_aqua']
+        level1b_aqua = OPTIONS['level1b_aqua']
+        level1b_250m_aqua = OPTIONS['level1b_250m_aqua']
+        level1b_500m_aqua = OPTIONS['level1b_500m_aqua']
+
         # Get the observation time from the filename as a datetime object:
-        LOG.debug("pdsfilename = %s", scene['pdsfilename'])
-        bname = os.path.basename(scene['pdsfilename'])
-        obstime = datetime.strptime(bname, filetype_terra)
+        LOG.debug("modis filename = %s", scene['modisfilename'])
+        bname = os.path.basename(scene['modisfilename'])
+        if mission == 'T':
+            obstime = datetime.strptime(bname, filetype_terra)
+        else:
+            obstime = datetime.strptime(bname, filetype_aqua)
         LOG.debug("bname = %s obstime = %s", str(bname), str(obstime))
 
         # level1_home
         proctime = datetime.now()
         lastpart = proctime.strftime("%Y%j%H%M%S.hdf")
-        firstpart = obstime.strftime(level1b_terra)
+        if mission == 'T':
+            firstpart = obstime.strftime(level1b_terra)
+        else:
+            firstpart = obstime.strftime(level1b_aqua)
         mod021km_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
-        firstpart = obstime.strftime(level1b_250m_terra)
+
+        if mission == 'T':
+            firstpart = obstime.strftime(level1b_250m_terra)
+        else:
+            firstpart = obstime.strftime(level1b_250m_aqua)
         mod02qkm_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
-        firstpart = obstime.strftime(level1b_500m_terra)
+
+        if mission == 'T':
+            firstpart = obstime.strftime(level1b_500m_terra)
+        else:
+            firstpart = obstime.strftime(level1b_500m_aqua)
         mod02hkm_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
+
         lastpart = proctime.strftime("%Y%j%H%M%S.hdf")
-        firstpart = obstime.strftime(level1a_terra)
+        if mission == 'T':
+            firstpart = obstime.strftime(level1a_terra)
+        else:
+            firstpart = obstime.strftime(level1a_aqua)
         mod01_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
-        firstpart = obstime.strftime(geofile_terra)
+
+        firstpart = obstime.strftime(geofiles[mission])
         mod03_file = "%s/%s_%s" % (level1b_home, firstpart, lastpart)
 
         retv = {'mod021km_file': mod021km_file,
@@ -581,11 +689,11 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
         modisl1_home = os.path.join(SEADAS_HOME, "ocssw/run/scripts")
         cmdl = ["%s/modis_L1A.py" % modisl1_home,
                 "--verbose",
-                "--mission=T",
+                "--mission=%s" % mission,
                 "--startnudge=%d" % startnudge,
                 "--stopnudge=%d" % endnudge,
                 "-o%s" % (os.path.basename(mod01_file)),
-                scene['pdsfilename']]
+                scene['modisfilename']]
 
         LOG.debug("Run command: " + str(cmdl))
         modislvl1b_proc = Popen(cmdl, shell=False,
@@ -624,15 +732,34 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
         else:
             LOG.warning("Missing level-1a file! %s", fname_orig)
 
+        if mission == 'A':
+            # Get ephemeris and attitude names
+            attitude, ephemeris = run_aqua_gbad(obstime)
+            if not attitude or not ephemeris:
+                LOG.error(
+                    "Failed producing the attitude and/or the ephemeris file(s)")
+                return None
+
         # Next run the geolocation and the level-1b file:
 
-        # modis_GEO.py --verbose --enable-dem --entrained --disable-download
-        # $level1a_file
-        cmdl = ["%s/modis_GEO.py" % modisl1_home,
-                "--verbose",
-                "--enable-dem", "--entrained", "--disable-download",
-                "-o%s" % (os.path.basename(mod03_file)),
-                mod01_file]
+        # Mission T: modis_GEO.py --verbose --enable-dem --entrained
+        # --disable-download $level1a_file
+        # Mission A: modis_GEO.py --verbose --enable-dem
+        # --disable-download -a aqua.att -e aqua.eph $level1a_file
+        if mission == 'T':
+            cmdl = ["%s/modis_GEO.py" % modisl1_home,
+                    "--verbose",
+                    "--enable-dem", "--entrained", "--disable-download",
+                    "-o%s" % (os.path.basename(mod03_file)),
+                    mod01_file]
+        else:
+            cmdl = ["%s/modis_GEO.py" % modisl1_home,
+                    "--verbose",
+                    "--enable-dem", "--disable-download",
+                    "-a%s" % attitude,
+                    "-e%s" % ephemeris,
+                    "-o%s" % (os.path.basename(mod03_file)),
+                    mod01_file]
 
         LOG.debug("Run command: " + str(cmdl))
         modislvl1b_proc = Popen(cmdl, shell=False,
@@ -742,7 +869,7 @@ def run_terra_l0l1(scene, message, job_id, publish_q):
             update_utcpole_and_leapsec_files()
 
     except:
-        LOG.exception('Failed in run_terra_l0l1...')
+        LOG.exception('Failed in run_terra_aqua_l0l1...')
         raise
 
 if __name__ == "__main__":
