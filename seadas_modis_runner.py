@@ -175,8 +175,8 @@ class FileListener(threading.Thread):
             return False
 
         sensor = msg.data.get('sensor', None)
-        if sensor not in ['modis']:
-            LOG.debug("Not MODIS data, skip it...")
+        if sensor not in ['modis', 'gbad']:
+            LOG.debug("Not MODIS or GBAD data, skip it...")
             return False
 
         LOG.debug("Ok: message = %s", str(msg))
@@ -367,7 +367,7 @@ def ready2run(message, eosfiles, job_register, sceneid):
             eosfiles[sceneid]['packetfile'] = ''
 
     elif (message.data['platform_name'] == "EOS-Aqua" and
-          message.data['sensor'] == 'modis'):
+          message.data['sensor'] in ['modis', 'gbad']):
 
         path, fname = os.path.split(urlobj.path)
         LOG.debug("path " + str(path) + " filename = " + str(fname))
