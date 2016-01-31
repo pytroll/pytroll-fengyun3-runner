@@ -782,9 +782,9 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
         modislvl1b_status = modislvl1b_proc.returncode
         LOG.debug(
             "Return code from modis geo-loc processing = " + str(modislvl1b_status))
-        # Apparently a return code of 1 is okay...
+        # Apparently a return code of 1 and None is okay...
         # Verify which return codes are ok! FIXME!
-        if modislvl1b_status not in [0, 1]:
+        if modislvl1b_status not in [0, 1, None]:
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
