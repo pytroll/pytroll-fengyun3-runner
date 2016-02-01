@@ -838,12 +838,14 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
 
         # Perform the modis destriping:
         # MOD_PRDS_DB.exe in_hdf in_coeff
-        cmdl = [os.path.join(DESTRIPE_HOME, modis_destripe),
+        cmdl = [os.path.join(DESTRIPE_HOME, 'bin/%s' % modis_destripe),
                 os.path.basename(mod021km_file)]
         if mission == 'T':
-            cmdl.append(terra_modis_destripe_coeff)
+            cmdl.append(os.path.join(DESTRIPE_HOME,
+                                     'coeff/%s' % terra_modis_destripe_coeff))
         else:
-            cmdl.append(aqua_modis_destripe_coeff)
+            cmdl.append(os.path.join(DESTRIPE_HOME,
+                                     'coeff/%s' % aqua_modis_destripe_coeff))
 
         LOG.debug("Run command: " + str(cmdl))
         modislvl1b_proc = Popen(cmdl, shell=False,
