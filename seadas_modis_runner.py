@@ -203,7 +203,7 @@ def modis_live_runner():
                     "Start url fetch...")
         update_utcpole_and_leapsec_files()
 
-    pool = Pool(processes=6, maxtasksperchild=1)
+    pool = Pool(processes=4, maxtasksperchild=1)
     manager = Manager()
     listener_q = manager.Queue()
     publisher_q = manager.Queue()
