@@ -276,6 +276,7 @@ def modis_live_runner():
                                   jobs_dict[
                                       keyname],
                                   publisher_q))
+                LOG.debug("Terra/Aqua lvl1 processing sent to pool worker...")
             else:
                 LOG.debug(
                     "Platform %s not supported yet...", str(platform_name))
@@ -913,6 +914,9 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
     except:
         LOG.exception('Failed in run_terra_aqua_l0l1...')
         raise
+
+    LOG.debug("Leaving run_terra_aqua_l0l1")
+
 
 if __name__ == "__main__":
 
