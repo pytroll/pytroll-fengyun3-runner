@@ -617,9 +617,13 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
         startnudge = int(OPTIONS['startnudge'])
         endnudge = int(OPTIONS['endnudge'])
 
-        modis_destripe = OPTIONS['modis_destripe_exe']
-        terra_modis_destripe_coeff = OPTIONS['terra_modis_destripe_coeff']
-        aqua_modis_destripe_coeff = OPTIONS['aqua_modis_destripe_coeff']
+        modis_destripe = OPTIONS.get('modis_destripe_exe')
+        terra_modis_destripe_coeff = OPTIONS.get('terra_modis_destripe_coeff')
+        aqua_modis_destripe_coeff = OPTIONS.get('aqua_modis_destripe_coeff')
+        if OPTIONS.get('apply_destriping'):
+            destripe_on = True
+        else:
+            destripe_on = False
 
         level1b_home = OPTIONS['level1b_home']
         LOG.debug("level1b_home = %s", level1b_home)
@@ -837,42 +841,47 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
             LOG.error("Failed in the Terra level-1 processing!")
             return None
 
-        # Perform the modis destriping:
-        # MOD_PRDS_DB.exe in_hdf in_coeff
-        cmdl = [os.path.join(DESTRIPE_HOME, 'bin/%s' % modis_destripe),
-                os.path.basename(mod021km_file)]
-        if mission == 'T':
-            cmdl.append(os.path.join(DESTRIPE_HOME,
-                                     'coeff/%s' % terra_modis_destripe_coeff))
+        if destripe_on:
+            LOG.info("Apply destriping...")
+            # Perform the modis destriping:
+            # MOD_PRDS_DB.exe in_hdf in_coeff
+            cmdl = [os.path.join(DESTRIPE_HOME, 'bin/%s' % modis_destripe),
+                    os.path.basename(mod021km_file)]
+            if mission == 'T':
+                cmdl.append(os.path.join(DESTRIPE_HOME,
+                                         'coeff/%s' % terra_modis_destripe_coeff))
+            else:
+                cmdl.append(os.path.join(DESTRIPE_HOME,
+                                         'coeff/%s' % aqua_modis_destripe_coeff))
+
+            LOG.debug("Run command: " + str(cmdl))
+            modislvl1b_proc = Popen(cmdl, shell=False,
+                                    cwd=working_dir,
+                                    stderr=PIPE, stdout=PIPE)
+
+            while True:
+                line = modislvl1b_proc.stdout.readline()
+                if not line:
+                    break
+                LOG.info(line)
+
+            while True:
+                errline = modislvl1b_proc.stderr.readline()
+                if not errline:
+                    break
+                LOG.info(errline)
+
+            modislvl1b_proc.poll()
+            modislvl1b_status = modislvl1b_proc.returncode
+
+            LOG.debug(
+                "Return code from modis destriping = " + str(modislvl1b_status))
+            if modislvl1b_status != 0:
+                LOG.error(
+                    "Failed in the Terra level-1 (destriping) processing!")
+                return None
         else:
-            cmdl.append(os.path.join(DESTRIPE_HOME,
-                                     'coeff/%s' % aqua_modis_destripe_coeff))
-
-        LOG.debug("Run command: " + str(cmdl))
-        modislvl1b_proc = Popen(cmdl, shell=False,
-                                cwd=working_dir,
-                                stderr=PIPE, stdout=PIPE)
-
-        while True:
-            line = modislvl1b_proc.stdout.readline()
-            if not line:
-                break
-            LOG.info(line)
-
-        while True:
-            errline = modislvl1b_proc.stderr.readline()
-            if not errline:
-                break
-            LOG.info(errline)
-
-        modislvl1b_proc.poll()
-        modislvl1b_status = modislvl1b_proc.returncode
-
-        LOG.debug(
-            "Return code from modis destriping = " + str(modislvl1b_status))
-        if modislvl1b_status != 0:
-            LOG.error("Failed in the Terra level-1 (destriping) processing!")
-            return None
+            LOG.info("Destriping will not be applied!")
 
         for key in ['geo_file',
                     'mod021km_file',
