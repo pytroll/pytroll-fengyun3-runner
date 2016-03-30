@@ -727,7 +727,7 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
         LOG.debug(
             "Return code from modis lvl-1a processing = " + str(modislvl1b_status))
         if modislvl1b_status != 0:
-            LOG.error("Failed in the Terra level-1 processing!")
+            LOG.error("Failed in the Terra/Aqua MODIS level-1 processing!")
             return None
 
         fname_orig = os.path.join(working_dir, os.path.basename(mod01_file))
@@ -795,7 +795,7 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
         # Apparently a return code of 1 and None is okay...
         # Verify which return codes are ok! FIXME!
         if modislvl1b_status not in [0, 1, None]:
-            LOG.error("Failed in the Terra level-1 processing!")
+            LOG.error("Failed in the Terra/Aqua MODIS level-1 processing!")
             return None
 
         l1b_files = []
