@@ -37,7 +37,7 @@ import posttroll.subscriber
 from posttroll.publisher import Publish
 from posttroll.message import Message
 import socket
-from trollduction import get_local_ips
+from modis_runner.helper_functions import get_local_ips
 from datetime import datetime
 from multiprocessing import Pool, Manager
 import threading
@@ -60,7 +60,7 @@ ETC_DIR = os.path.join(SEADAS_HOME, 'ocssw/run/var/modis')
 DESTRIPE_HOME = os.environ.get('MODIS_DESTRIPING_HOME', '')
 
 SPA_HOME = os.environ.get("SPA_HOME", '')
-#ETC_DIR = os.path.join(SPA_HOME, 'etc')
+# ETC_DIR = os.path.join(SPA_HOME, 'etc')
 
 NAVIGATION_HELPER_FILES = ['utcpole.dat', 'leapsec.dat']
 
@@ -125,7 +125,7 @@ class FilePublisher(threading.Thread):
 
 class FileListener(threading.Thread):
 
-    """A file listener class, to listen for incoming messages with a 
+    """A file listener class, to listen for incoming messages with a
     relevant file for further processing"""
 
     def __init__(self, queue):

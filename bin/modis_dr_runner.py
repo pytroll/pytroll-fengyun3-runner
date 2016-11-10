@@ -31,7 +31,7 @@ import os
 import glob
 import logging
 import socket
-from trollduction import get_local_ips
+from modis_runner.helper_functions import get_local_ips
 
 #: Default time format
 _DEFAULT_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -199,7 +199,7 @@ def run_terra_l0l1(pdsfile):
 
     working_dir = get_working_dir()
 
-    #fdwork = os.open(working_dir, os.O_RDONLY)
+    # fdwork = os.open(working_dir, os.O_RDONLY)
     # os.fchdir(fdwork)
 
     level1b_home = OPTIONS['level1b_home']
@@ -398,12 +398,12 @@ def run_aqua_l0l1(pdsfile):
     from subprocess import Popen, PIPE, STDOUT
 
     # unicode -> ascii ignoring any non-ascii characters!:
-    #pdsfile = pdsfile.encode('ascii', 'ignore')
+    # pdsfile = pdsfile.encode('ascii', 'ignore')
 
     working_dir = get_working_dir()
 
-    #ephemeris_home = OPTIONS['ephemeris_home']
-    #attitude_home = OPTIONS['attitude_home']
+    # ephemeris_home = OPTIONS['ephemeris_home']
+    # attitude_home = OPTIONS['attitude_home']
     level1b_home = OPTIONS['level1b_home']
     filetype_aqua = OPTIONS['filetype_aqua']
     geofile_aqua = OPTIONS['geofile_aqua']
@@ -418,8 +418,8 @@ def run_aqua_l0l1(pdsfile):
 
     # Get ephemeris and attitude names! FIXME!
     attitude, ephemeris = run_aqua_gbad(obstime)
-    #ephemeris = "%s/P15409571540958154095911343000923001.eph" % ephemeris_home
-    #attitude  = "%s/P15409571540958154095911343000923001.att" % attitude_home
+    # ephemeris = "%s/P15409571540958154095911343000923001.eph" % ephemeris_home
+    # attitude  = "%s/P15409571540958154095911343000923001.att" % attitude_home
     if not attitude or not ephemeris:
         LOG.error("Failed producing the attitude and/or the ephemeris file(s)")
         return None
@@ -470,7 +470,7 @@ def run_aqua_l0l1(pdsfile):
     cmdlist.append('geocheck_threshold')
     cmdlist.append(str(geocheck_threshold))
     LOG.debug("Run command: " + str(cmdlist))
-    #my_env = os.environ.copy()
+    # my_env = os.environ.copy()
     # Run the command:
     modislvl1b_proc = Popen(cmdlist, shell=False,
                             cwd=working_dir,
@@ -872,12 +872,13 @@ if __name__ == "__main__":
 
     modis_live_runner()
 
-    #aqua_modis_file = '/san1/polar_in/direct_readout/modis/P1540064AAAAAAAAAAAAAA12298130323001.PDS'
+    # aqua_modis_file =
+    # '/san1/polar_in/direct_readout/modis/P1540064AAAAAAAAAAAAAA12298130323001.PDS'
 
     # print DAYS_BETWEEN_URL_DOWNLOAD
     # LOG.info("Checking the modis luts and updating " +
     #         "from internet if necessary!")
-    #fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
+    # fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
     # print "fresh: ", fresh
     # if fresh:
     #    LOG.info("Files in etc dir are fresh! No url downloading....")
@@ -886,6 +887,6 @@ if __name__ == "__main__":
     #                "Start url fetch...")
     #    update_utcpole_and_leapsec_files()
 
-    #LOG.info("File = " + str(aqua_modis_file))
+    # LOG.info("File = " + str(aqua_modis_file))
 
-    #lvl1filename = run_aqua_l0l1(aqua_modis_file)
+    # lvl1filename = run_aqua_l0l1(aqua_modis_file)
