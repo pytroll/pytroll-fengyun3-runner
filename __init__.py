@@ -1,2 +1,0 @@
-"""Satin Package initializer.
-"""
