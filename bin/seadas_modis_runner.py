@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016, 2018 Adam.Dybbroe
+# Copyright (c) 2016 - 2019 PyTroll
 
 # Author(s):
 
-#   Adam.Dybbroe <a000680@c20671.ad.smhi.se>
+#   Adam.Dybbroe <adam.dybbroe@smhi.se>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -478,7 +478,7 @@ def clean_utcpole_and_leapsec_files(thr_days=60):
         lastpart = os.path.basename(filename).split('dat_')[1]
         tobj = datetime.strptime(lastpart, "%Y%m%d%H%M")
         if (now - tobj) > deltat:
-            LOG.info("File to old, cleaning: %s " % filename)
+            LOG.info("File too old, cleaning: %s " % filename)
             os.remove(filename)
 
     return
@@ -732,7 +732,7 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
 
             l1a_file = retv['level1a_file']
             pubmsg = create_message(message.data, l1a_file, "1A")
-            LOG.info("Sending: " + str(pubmsg))
+            LOG.info("Sending: %s", pubmsg)
             publish_q.put(pubmsg)
         else:
             LOG.warning("Missing level-1a file! %s", fname_orig)
@@ -767,7 +767,7 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
                 "-o%s" % (os.path.basename(mod03_file)), mod01_file
             ]
 
-        LOG.debug("Run command: " + str(cmdl))
+        LOG.debug("Run command: %s", str(cmdl))
         modislvl1b_proc = Popen(
             cmdl, shell=False, cwd=working_dir, stderr=PIPE, stdout=PIPE)
 
@@ -853,7 +853,7 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
                     os.path.join(DESTRIPE_HOME,
                                  'coeff/%s' % aqua_modis_destripe_coeff))
 
-            LOG.debug("Run command: " + str(cmdl))
+            LOG.debug("Run command: %s", str(cmdl))
             modislvl1b_proc = Popen(
                 cmdl, shell=False, cwd=working_dir, stderr=PIPE, stdout=PIPE)
 
@@ -893,7 +893,7 @@ def run_terra_aqua_l0l1(scene, message, job_id, publish_q):
                 LOG.warning("Missing file: %s", fname_orig)
 
         pubmsg = create_message(message.data, l1b_files, '1B')
-        LOG.info("Sending: " + str(pubmsg))
+        LOG.info("Sending: %s", pubmsg)
         publish_q.put(pubmsg)
 
         if isinstance(job_id, datetime):
