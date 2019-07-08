@@ -1,2 +1,2 @@
-# pytroll-modis-runner
-Pytroll runner for MODIS pre-processing
+# pytroll-gengyun3-runner
+Pytroll runner for FENGYUN3 pre-processing

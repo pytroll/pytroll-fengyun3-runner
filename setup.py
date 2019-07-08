@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, 2014, 2015, 2016 Martin Raspaud
+# Copyright (c) 2019 Trygve Aspenes
 
 # Author(s):
 
-#   Martin Raspaud <martin.raspaud@smhi.se>
+#   Trygve Aspenes <trygveas@met.no>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,18 +20,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Setup for aapp-runner.
+"""Setup for fengyun3-runner.
 """
 from setuptools import setup
 import imp
 
-version = imp.load_source('modis_runner.version', 'modis_runner/version.py')
+version = imp.load_source('fengyun3_runner.version', 'fengyun3_runner/version.py')
 
-setup(name="modis_runner",
+setup(name="fengyun3_runner",
       version=version.__version__,
-      description='Pytroll runner for AAPP',
-      author='Adam Dybroe',
-      author_email='adam.dybroe@smhi.se',
+      description='Pytroll runner for FENGYUN3',
+      author='Trygve Aspenes',
+      author_email='trygveas@met.no',
       classifiers=["Development Status :: 3 - Alpha",
                    "Intended Audience :: Science/Research",
                    "License :: OSI Approved :: GNU General Public License v3 " +
@@ -39,9 +39,9 @@ setup(name="modis_runner",
                    "Operating System :: OS Independent",
                    "Programming Language :: Python",
                    "Topic :: Scientific/Engineering"],
-      url="https://github.com/pytroll/pytroll-aapp-runner",
-      packages=['modis_runner', ],
-      scripts=['bin/modis_dr_runner.py', 'bin/seadas_modis_runner.py', ],
+      url="",
+      packages=['fengyun3_runner', ],
+      scripts=['bin/fengyun_runner.py', ],
       data_files=[],
       zip_safe=False,
       install_requires=['posttroll', ],
