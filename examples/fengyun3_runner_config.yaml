@@ -1,0 +1,62 @@
+---
+
+test:
+  fengyun3_home: /software/fengyun
+  ld_library_path: /software/fengyun/fy3dl1db/lib
+
+  listen_topic: /XLBANDANTENNA/FENGYUN3D/CLEAR
+  listen_service: move_it_CLEAR-FENGYUN3D
+  publish_topic: /XLBANDANTENNA/FENGYUN3D/CLEAR
+
+  working_dir: /data/pytroll/fengyun3/working_dir
+
+#  fy3_l0: '{mission}_X_{start_time:%Y_%m_%d_%H_%M}_A_G'
+  fy3_l0: 'tf{start_time:%Y%j%H%M%S}.{mission}-X'
+  fy3dl0db: /software/fengyun/fy3dl0db/data/org/
+  fy3dl0db_gps: /software/fengyun/fy3dl0db/data/vass_l0
+
+  gps2s: /software/fengyun/fy3dl1db/data/gps/GPS2S.DAT
+  gpsxx: /software/fengyun/fy3dl1db/data/gps/GPSXX.DAT
+  
+  process_instrument_scripts_l0:
+    - Fy3VassL0db.csh
+    - Fy3MersiL0db.csh
+    - Fy3HirasL0db.csh
+
+  process_instrument_scripts_l1:
+    - script: Fy3MersiL1db.csh
+      instrument: MERSI
+      fy3dl0db: /software/fengyun/fy3dl0db/data/mersi_l0
+      fy3dl1db: /software/fengyun/fy3dl1db/data/mersi_l0
+      fy3dl1db_l1: /software/fengyun/fy3dl1db/data/mersi_l1
+      l1_files: [1000M_L1B.HDF, 0250M_L1B.HDF, GEOQK_L1B.HDF, GEO1K_L1B.HDF]
+    - script: Fy3HirasL1db.csh
+      instrument: HIRAS
+      fy3dl0db: /software/fengyun/fy3dl0db/data/hiras_l0
+      fy3dl1db: /software/fengyun/fy3dl1db/data/hiras_l0
+      fy3dl1db_l1: /software/fengyun/fy3dl1db/data/hiras_l1
+      l1_files: [L1B.HDF]
+    - script: Fy3MwhsL1db.csh
+      instrument: MWHSX
+      fy3dl0db: /software/fengyun/fy3dl0db/data/vass_l0
+      fy3dl1db: /software/fengyun/fy3dl1db/data/mwhs_l0
+      fy3dl1db_l1: /software/fengyun/fy3dl1db/data/mwhs_l1
+      l1_files: [L1B.HDF]
+    - script: Fy3MwtsL1db.csh
+      instrument: MWTSX
+      fy3dl0db: /software/fengyun/fy3dl0db/data/vass_l0
+      fy3dl1db: /software/fengyun/fy3dl1db/data/mwts_l0
+      fy3dl1db_l1: /software/fengyun/fy3dl1db/data/mwts_l1
+      l1_files: [L1B.HDF]
+    #Note: MWRI only available for FY3ABC
+    - script: Fy3MwriL1db.csh
+      instrument: MWRIX
+      fy3dl0db: /software/fengyun/fy3dl0db/data/vass_l0
+      fy3dl1db: /software/fengyun/fy3dl1db/data/mwri_l0
+      fy3dl1db_l1: /software/fengyun/fy3dl1db/data/mwri_l1
+      l1_files: [L1B.HDF]
+
+  leapsec_utcpole: https://oceandata.sci.gsfc.nasa.gov/Ancillary/LUTs/modis/
+  one_le:
+    - {http: http://file.nsmc.org.cn/ONELINE/FY3D/43010.dat, out: /software/fengyun/fy3dl1db/SysData/fy3d1line.dat}
+    - {http: http://file.nsmc.org.cn/ONELINE/FY3C/39260.dat, out: /software/fengyun/fy3dl1db/SysData/fy3c1line.dat}
