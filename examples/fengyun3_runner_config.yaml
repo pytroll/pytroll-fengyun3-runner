@@ -6,7 +6,7 @@ test:
 
   listen_topic: /XLBANDANTENNA/FENGYUN3D/CLEAR
   listen_service: move_it_CLEAR-FENGYUN3D
-  publish_topic: /XLBANDANTENNA/FENGYUN3D/CLEAR
+  publish_topic: /XLBANDANTENNA/FENGYUN3D/L1B
 
   working_dir: /data/pytroll/fengyun3/working_dir
 
