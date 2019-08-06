@@ -85,14 +85,14 @@ _DEFAULT_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 #: Default log format
 _DEFAULT_LOG_FORMAT = '[%(levelname)s: %(asctime)s : %(name)s] %(message)s'
 
-FENGYUN3_HOME = os.environ.get("FENGYUN3_HOME", '')
+#FENGYUN3_HOME = os.environ.get("FENGYUN3_HOME", '')
 NAVIGATION_HELPER_FILES = ['utcpole.dat', 'leapsec.dat']
 
 MODE = os.getenv("SMHI_MODE")
 if MODE is None:
     MODE = "offline"
 
-def reset_job_registry(objdict, eosfiles, key):
+def reset_job_registry(objdict, fy3files, key):
     """Remove job key from registry"""
     LOG.debug("Release/reset job-key " + str(key) + " from job registry")
     if key in objdict:
@@ -102,9 +102,9 @@ def reset_job_registry(objdict, eosfiles, key):
                     "Job registry didn't contain any entry matching: " +
                     str(key))
 
-    LOG.debug("Release/reset key " + str(key) + " from eosfiles registry")
-    if key in eosfiles:
-        eosfiles.pop(key)
+    LOG.debug("Release/reset key " + str(key) + " from fengyun3 files registry")
+    if key in fy3files:
+        fy3files.pop(key)
     else:
         LOG.warning("Nothing to reset/release - " +
                     "Fengyun-files registry didn't contain any entry matching: " +
@@ -203,12 +203,31 @@ class FileListener(threading.Thread):
         LOG.debug("Ok: message = %s", str(msg))
         return True
 
+def check_directories(options):
+    def _check_dir(directory):
+        if not os.path.exists(directory):
+            try:
+                os.makedirs(directory)
+                LOG.debug("Created directory: %s",directory)
+            except OSError:
+                LOG.error("Failed creating directory %s", directory)
+                raise
+            
+    #_check_dir(options['fy3dl0db'])
+    #_check_dir(options['fy3dl0db_gps'])
+    #for instr in options['process_instrument_scripts_l1']:
+    #    _check_dir(instr['fy3dl0db'])
+    #    _check_dir(instr['fy3dl1db_l0'])
+    #    _check_dir(instr['fy3dl1db_l1'])
+
 
 def fengyun3_live_runner(options):
     """Listens and triggers processing"""
 
     LOG.info("*** Start the runner for the FENGYUN3 level-1 processing")
     LOG.debug("os.environ = " + str(os.environ))
+
+    check_directories(options)
 
     # Start checking and downloading the luts (utcpole.dat and
     # leapsec.dat):
@@ -647,7 +666,8 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
         if scene['platform_name'] == 'Fengyun-3D':
             scene['mission'] = 'FY3D'
 
-        fileout = os.path.join(options['fy3dl0db'], compose(options['fy3_l0'], scene) + ".ORG")
+        fy3dl0db = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/org/')
+        fileout = os.path.join(fy3dl0db, compose(options['fy3_l0'], scene) + ".ORG")
         LOG.debug("fileout: %s", str(fileout))
         #MEOS CLEAR data has cadu size 1072. Rewrite to 1024
         if os.path.exists(scene['fy3filename']) and os.path.basename(scene['fy3filename']).startswith('clear'):
@@ -667,12 +687,15 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
             LOG.debug("No MEOS clear file: %s", scene['fy3filename'])
 
         os.environ['HOME'] = options['fengyun3_home']
-        os.environ['LD_LIBRARY_PATH'] = options['ld_library_path']
+        # Some of the processing scripts needs the ld_library_path.
+        # Can be configured or given as an env variable for the runner
+        if 'ld_library_path' in options:
+            os.environ['LD_LIBRARY_PATH'] = options.get('ld_library_path')
         LOG.info("Level-0 filename: " + str(fileout))
-        fy3_unpack_home = os.path.join(options['fengyun3_home'], "fy3dl0db", "bin")
+        fy3_l0_bin_dir = os.path.join(options['fengyun3_home'], "fy3dl0db", "bin")
         
         for instrument in options['process_instrument_scripts_l0']:
-            cmdl = ["{}/{}".format(fy3_unpack_home, instrument),
+            cmdl = ["{}/{}".format(fy3_l0_bin_dir, instrument),
                     "{}".format(os.path.basename(fileout)),
                     "{}".format(scene['mission'])
             ]
@@ -702,34 +725,87 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
 
         #Link the unpack data from l0 to l1 data directories
 
+        gps2s = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/gps/GPS2S.DAT')
+        gpsxx = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/gps/GPSXX.DAT')
+
         #Clean GPSXX and GPS2S if exists
-        if os.path.exists(options['gps2s']):
-            os.remove(options['gps2s'])
-        if os.path.exists(options['gpsxx']):
-            os.remove(options['gpsxx'])
-            
+        if os.path.exists(gps2s):
+            os.remove(gps2s)
+        if os.path.exists(gpsxx):
+            os.remove(gpsxx)
+
+        fy3dl0db_gps = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/vass_l0')
+
         #Link needed GPSXX ad GPS2S to actual GPSXX and GPS2S data
-        gps2s_link_file = os.path.join(options['fy3dl0db_gps'], compose(options['fy3_l0'], scene) + "_GPS2S.DAT")
-        gpsxx_link_file = os.path.join(options['fy3dl0db_gps'], compose(options['fy3_l0'], scene) + "_GPSXX.DAT")
+        gps2s_link_file = os.path.join(fy3dl0db_gps, compose(options['fy3_l0'], scene) + "_GPS2S.DAT")
+        gpsxx_link_file = os.path.join(fy3dl0db_gps, compose(options['fy3_l0'], scene) + "_GPSXX.DAT")
         if os.path.exists(gps2s_link_file):
-            os.link(gps2s_link_file, options['gps2s'])
+            os.link(gps2s_link_file, gps2s)
         else:
             LOG.debug("Could not find gps2s file to link to gps2s files: %s", gps2s_link_file)
         if os.path.exists(gpsxx_link_file):
-            os.link(gpsxx_link_file, options['gpsxx'])
+            os.link(gpsxx_link_file, gpsxx)
         else:
             LOG.debug("Could not find gpsxx file to link to gpsxx files: %s", gpsxx_link_file)
 
         fy3_l1_home = os.path.join(options['fengyun3_home'], "fy3dl1db", "bin")
+
+        #Paths where to find processed data
+        pdp = {}
+        pdp['Mersi'] = {}
+        pdp['Mersi']['sensor'] = 'MERSI'
+        pdp['Mersi']['fy3dl0db'] = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/mersi_l0')
+        pdp['Mersi']['fy3dl1db_l0'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/mersi_l0')
+        pdp['Mersi']['fy3dl1db_l1'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/mersi_l1')
+        pdp['Mersi']['l1_files'] = ['1000M_L1B.HDF', '0250M_L1B.HDF', 'GEOQK_L1B.HDF', 'GEO1K_L1B.HDF']
+        pdp['Hiras'] = {}
+        pdp['Hiras']['sensor'] = 'HIRAS'
+        pdp['Hiras']['fy3dl0db'] = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/hiras_l0')
+        pdp['Hiras']['fy3dl1db_l0'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/hiras_l0')
+        pdp['Hiras']['fy3dl1db_l1'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/hiras_l1')
+        pdp['Hiras']['l1_files'] = ['L1B.HDF']
+        pdp['Mwhs'] = {}
+        pdp['Mwhs']['sensor'] = 'MWHSX'
+        pdp['Mwhs']['fy3dl0db'] = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/vass_l0')
+        pdp['Mwhs']['fy3dl1db_l0'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/mwhs_l0')
+        pdp['Mwhs']['fy3dl1db_l1'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/mwhs_l1')
+        pdp['Mwhs']['l1_files'] = ['L1B.HDF']
+        pdp['Mwts'] = {}
+        pdp['Mwts']['sensor'] = 'MWTSX'
+        pdp['Mwts']['fy3dl0db'] = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/vass_l0')
+        pdp['Mwts']['fy3dl1db_l0'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/mwts_l0')
+        pdp['Mwts']['fy3dl1db_l1'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/mwts_l1')
+        pdp['Mwts']['l1_files'] = ['L1B.HDF']
+        pdp['Mwri'] = {}
+        pdp['Mwri']['sensor'] = 'MWRIX'
+        pdp['Mwri']['fy3dl0db'] = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/vass_l0')
+        pdp['Mwri']['fy3dl1db_l0'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/mwri_l0')
+        pdp['Mwri']['fy3dl1db_l1'] = os.path.join(options['fengyun3_home'], 'fy3dl1db/data/mwri_l1')
+        pdp['Mwri']['l1_files'] = ['L1B.HDF']
+
         for instrument in options['process_instrument_scripts_l1']:
-            if instrument['instrument'] == 'MWRIX' and scene['mission'] not in MWRI_MISSIONS:
+            if 'Mersi' in instrument:
+                data_conf = pdp['Mersi']
+            elif 'Hiras' in instrument:
+                data_conf = pdp['Hiras']
+            elif 'Mwts' in instrument:
+                data_conf = pdp['Mwts']
+            elif 'Mwhs' in instrument:
+                data_conf = pdp['Mwhs']
+            elif 'Mwri' in instrument:
+                data_conf = pdp['Mwri']
+            else:
+                LOG.warning("Unknown instrument.")
+                continue
+
+            if 'Mwri' in instrument and scene['mission'] not in MWRI_MISSIONS:
                 LOG.debug("MWRI only available for %s", str(MWRI_MISSIONS))
                 continue
-            if instrument['instrument'] == 'HIRAS' and scene['mission'] not in HIRAS_MISSIONS:
+            if 'Hiras' in instrument and scene['mission'] not in HIRAS_MISSIONS:
                 LOG.debug("HIRAS only available for %s", str(HIRAS_MISSIONS))
                 continue
-            link_file = os.path.join(instrument['fy3dl0db'], compose(options['fy3_l0'], scene) + "_{}.DAT".format(instrument['instrument']))
-            link_name = os.path.join(instrument['fy3dl1db'], compose(options['fy3_l0'], scene) + "_{}.DAT".format(instrument['instrument']))
+            link_file = os.path.join(data_conf['fy3dl0db'], compose(options['fy3_l0'], scene) + "_{}.DAT".format(data_conf['sensor']))
+            link_name = os.path.join(data_conf['fy3dl1db_l0'], compose(options['fy3_l0'], scene) + "_{}.DAT".format(data_conf['sensor']))
             #Clean l0 file if exists
             if os.path.exists(link_name):
                 os.remove(link_name)
@@ -738,13 +814,13 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                 os.link(link_file, link_name)
             else:
                 LOG.debug("Could not find file from unpack to link to l1 file: %s", link_file)
-            cmdl = ["{}/{}".format(fy3_l1_home, instrument['script'])]
-            if instrument['instrument'] != 'MWHSX':
+            cmdl = ["{}/{}".format(fy3_l1_home, instrument)]
+            if data_conf['sensor'] != 'MWHSX':
                 cmdl.append("GPSXX.DAT")
-            if instrument['instrument'] == 'MERSI':
+            if data_conf['sensor'] == 'MERSI':
                 cmdl.append("GPS2S.DAT")
             cmdl.append("{}_{}.DAT".format(compose(options['fy3_l0'], scene),
-                                   instrument['instrument']))
+                                   data_conf['sensor']))
             cmdl.append("{}".format(scene['mission']))
             LOG.debug("Run command: %s", str(cmdl))
             fy3lvl1b_proc = Popen(
@@ -773,17 +849,17 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                 return None
 
             l1b_files = []
-            for l1_file in instrument['l1_files']:
-                fname = os.path.join(instrument['fy3dl1db_l1'],
+            for l1_file in data_conf['l1_files']:
+                fname = os.path.join(data_conf['fy3dl1db_l1'],
                                      "{}_{}_{}".format(compose(options['fy3_l0'], scene),
-                                                       instrument['instrument'],
+                                                       data_conf['sensor'],
                                                        l1_file))
                 if os.path.exists(fname):
                     l1b_files.append(fname)
                 else:
                     LOG.warning("Missing file: %s", fname)
 
-            pubmsg = create_message(message.data, l1b_files, '1B', instrument['instrument'], options)
+            pubmsg = create_message(message.data, l1b_files, '1B', data_conf['sensor'], options)
             LOG.info("Sending: %s", pubmsg)
             publish_q.put(pubmsg)
 
@@ -868,9 +944,10 @@ if __name__ == "__main__":
     OPTIONS = config[mode]
 
     #If FENGYUN3_HOME is given in the config file, override the env variable.
-    if OPTIONS['fengyun3_home']:
-        FENGYUN3_HOME = OPTIONS['fengyun3_home']
-    ETC_DIR = os.path.join(FENGYUN3_HOME, 'fy3dl1db/SysData/')
+    #if OPTIONS['fengyun3_home']:
+    #    FENGYUN3_HOME = OPTIONS['fengyun3_home']
+    ETC_DIR = os.path.join(OPTIONS['fengyun3_home'],
+                           'fy3dl1db/SysData/')
         
     DAYS_BETWEEN_URL_DOWNLOAD = OPTIONS.get('days_between_url_download', 14)
     DAYS_KEEP_OLD_ETC_FILES = OPTIONS.get('days_keep_old_etc_files', 60)
