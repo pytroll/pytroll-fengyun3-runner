@@ -158,7 +158,6 @@ class FileListener(threading.Thread):
         self.queue.put(None)
 
     def run(self):
-
         with posttroll.subscriber.Subscribe('', [
                 self.listen_topic,
         ], True) as subscr:
@@ -192,7 +191,7 @@ class FileListener(threading.Thread):
         if msg.data['platform_name'] not in FY3_SATELLITES:
             LOG.info(
                 str(msg.data['platform_name']) + ": " +
-                "Not an EOS satellite. Continue...")
+                "Not an FENGYUN3 satellite. Continue...")
             return False
 
         sensor = msg.data.get('sensor', None)
@@ -223,8 +222,14 @@ def fengyun3_live_runner(options):
                     "Start url fetch...")
         update_utcpole_and_leapsec_files()
 
-    # Need to download the 1le file
-    download_1le(options)
+    fresh_1le = check_1le_files(options)
+    if fresh_1le:
+        LOG.info("1le files in etc dir are fresh! No url downloading....")
+    else:
+        LOG.warning("1le files in etc are non existent or too old. " +
+                    "Start url fetch...")
+        # Need to download the 1le file
+        download_1le(options)
 
     pool = Pool(processes=6, maxtasksperchild=1)
     manager = Manager()
@@ -234,8 +239,8 @@ def fengyun3_live_runner(options):
     pub_thread = FilePublisher(publisher_q, options.get('publish_topic'))
     pub_thread.start()
     listen_thread = FileListener(listener_q,
-                                 options.get('publish_topic','/PDS/0'),
-                                 options.get('publish_service'))
+                                 options.get('listen_topic','/PDS/0'),
+                                 options.get('listen_service'))
     listen_thread.start()
 
     fy3_files = {}
@@ -251,7 +256,7 @@ def fengyun3_live_runner(options):
         LOG.debug("Number of threads currently alive: " +
                   str(threading.active_count()))
 
-        LOG.info("EOS files: " + str(fy3_files))
+        LOG.info("FENGYUN3 files: " + str(fy3_files))
         LOG.debug("\tMessage:")
         LOG.debug(msg)
 
@@ -320,7 +325,7 @@ def fengyun3_live_runner(options):
     listen_thread.stop()
 
 
-def create_message(mda, filename, level, sensor):
+def create_message(mda, filename, level, sensor, options):
     LOG.debug("mda: = " + str(mda))
     LOG.debug("type(mda): " + str(type(mda)))
     to_send = mda.copy()
@@ -341,15 +346,15 @@ def create_message(mda, filename, level, sensor):
     to_send['type'] = 'HDF5'
     to_send['sensor'] = sensor
 
-    station = OPTIONS.get('station', 'unknown')
+    station = options.get('station', 'unknown')
     pubish_topic = '/'.join((str(to_send['format']),
                              str(to_send['data_processing_level']),
                              station,
                              MODE,
                              'polar'
                              'direct_readout'))
-    if 'publish_topic' in OPTIONS:
-        publish_topic = OPTIONS['publish_topic']
+    if 'publish_topic' in options:
+        publish_topic = options['publish_topic']
     message = Message(publish_topic, mtype, to_send).encode()
     return message
 
@@ -430,6 +435,45 @@ def clean_utcpole_and_leapsec_files(thr_days=60):
             os.remove(filename)
 
     return
+
+def check_1le_files(options, thr_hours=1):
+    """Check if the 1le file are available in the
+    etc directory and check if they are fresh.
+    Return True if fresh/new files exists, otherwise False
+
+    """
+
+    from glob import glob
+    from datetime import datetime, timedelta
+
+    now = datetime.utcnow()
+    tdelta = timedelta(hours=int(thr_hours))
+
+    files_ok = True
+    for bname in options['one_le']:
+        LOG.info("File " + str(bname['out']) + "...")
+        filename = os.path.join(ETC_DIR, os.path.basename(bname['out']))
+        if os.path.exists(filename):
+            # Check how old it is:
+            realpath = os.path.realpath(filename)
+            # Get the timestamp in the file name:
+            try:
+                tstamp = os.path.basename(realpath).split('.dat_')[1]
+            except IndexError:
+                files_ok = False
+                break
+            tobj = datetime.strptime(tstamp, "%Y%m%d%H%M")
+
+            if (now - tobj) > tdelta:
+                LOG.info("File too old! File=%s " % filename)
+                files_ok = False
+                break
+        else:
+            LOG.info("No 1le file: %s" % filename)
+            files_ok = False
+            break
+
+    return files_ok
 
 def download_1le(options):
     """Download the FY3 1le file"""
@@ -607,7 +651,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
         LOG.debug("fileout: %s", str(fileout))
         #MEOS CLEAR data has cadu size 1072. Rewrite to 1024
         if os.path.exists(scene['fy3filename']) and os.path.basename(scene['fy3filename']).startswith('clear'):
-            LOG.debug("Rewrite MEOS clear file ...")
+            LOG.info("Rewrite MEOS clear file ...")
             fd_out = open(fileout, 'wb')
             with open(scene['fy3filename'], 'rb') as fd:
                 while True:
@@ -618,7 +662,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                         break
             fd.close()
             fd_out.close()
-            LOG.debug("Complete rewrite.")
+            LOG.info("Complete rewrite.")
         else:
             LOG.debug("No MEOS clear file: %s", scene['fy3filename'])
 
@@ -739,7 +783,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                 else:
                     LOG.warning("Missing file: %s", fname)
 
-            pubmsg = create_message(message.data, l1b_files, '1B', instrument['instrument'])
+            pubmsg = create_message(message.data, l1b_files, '1B', instrument['instrument'], options)
             LOG.info("Sending: %s", pubmsg)
             publish_q.put(pubmsg)
 
@@ -762,8 +806,14 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                         "Start url fetch...")
             update_utcpole_and_leapsec_files()
 
-        # Need to download the 1le file
-        download_1le(options)
+        fresh_1le = check_1le_files(options)
+        if fresh_1le:
+            LOG.info("1le files in etc dir are fresh! No url downloading....")
+        else:
+            LOG.warning("1le files in etc are non existent or too old. " +
+                        "Start url fetch...")
+            # Need to download the 1le file
+            download_1le(options)
         
     except:
         LOG.exception('Failed in run_fy3_l0l1...')
