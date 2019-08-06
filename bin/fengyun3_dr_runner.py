@@ -408,59 +408,6 @@ def get_working_dir(options):
     return working_dir
 
 
-def run_aqua_gbad(obs_time):
-    """Run the gbad for aqua"""
-
-    from subprocess import Popen, PIPE
-
-    working_dir = get_working_dir()
-
-    level0_home = OPTIONS['level0_home']
-    packetfile = os.path.join(level0_home,
-                              obs_time.strftime(OPTIONS['packetfile_aqua']))
-
-    att_dir = OPTIONS['attitude_home']
-    eph_dir = OPTIONS['ephemeris_home']
-    spa_config_file = os.path.join(SPA_HOME, "smhi_configfile")
-    att_file = os.path.basename(packetfile).split('.PDS')[0] + '.att'
-    att_file = os.path.join(att_dir, att_file)
-    eph_file = os.path.basename(packetfile).split('.PDS')[0] + '.eph'
-    eph_file = os.path.join(eph_dir, eph_file)
-    LOG.info("eph-file = " + eph_file)
-
-    wrapper_home = SPA_HOME + "/wrapper/gbad"
-    cmdl = [
-        "%s/run" % wrapper_home, "aqua.gbad.pds", packetfile, "aqua.gbad_att",
-        att_file, "aqua.gbad_eph", eph_file, "configurationfile",
-        spa_config_file
-    ]
-    LOG.info("Command: " + str(cmdl))
-    # Run the command:
-    modislvl1b_proc = Popen(
-        cmdl, shell=False, cwd=working_dir, stderr=PIPE, stdout=PIPE)
-
-    while True:
-        line = modislvl1b_proc.stdout.readline()
-        if not line:
-            break
-        LOG.info(line)
-
-    while True:
-        errline = modislvl1b_proc.stderr.readline()
-        if not errline:
-            break
-        LOG.info(errline)
-
-    modislvl1b_proc.poll()
-    modislvl1b_status = modislvl1b_proc.returncode
-    LOG.debug("Return code from modis lvl1b proc = " + str(modislvl1b_status))
-    if modislvl1b_status != 0:
-        LOG.error("Failed in the Aqua gbad processing!")
-        return None, None
-
-    return att_file, eph_file
-
-
 def clean_utcpole_and_leapsec_files(thr_days=60):
     """Clean any old *leapsec.dat* and *utcpole.dat* backup files, older than
     *thr_days* old
@@ -573,7 +520,7 @@ def check_utcpole_and_leapsec_files(thr_days=14):
 def update_utcpole_and_leapsec_files():
     """
     Function to update the ancillary data files *leapsec.dat* and
-    *utcpole.dat* used in the navigation of MODIS direct readout data.
+    *utcpole.dat* used in the navigation of FENGYUN3 direct readout data.
 
     These files need to be updated at least once every 2nd week, in order to
     achieve the best possible navigation.
@@ -708,24 +655,6 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
             if fy3_unpack_status not in [1, None]:
                 LOG.error("Failed in the FY3 unpack processing!")
                 return None
-        
-            #fname_orig = os.path.join(working_dir, os.path.basename(mod01_file))
-            #if os.path.exists(fname_orig):
-            #    shutil.move(fname_orig, mod01_file)
-
-            #    l1a_file = retv['level1a_file']
-            #    pubmsg = create_message(message.data, l1a_file, "1A")
-            #    LOG.info("Sending: %s", pubmsg)
-            #    publish_q.put(pubmsg)
-            #else:
-            #    LOG.warning("Missing level-1a file! %s", fname_orig)
-
-        # Next run the geolocation and the level-1b file:
-
-        # Mission T: modis_GEO.py --verbose --enable-dem --entrained
-        # --disable-download $level1a_file
-        # Mission A: modis_GEO.py --verbose --enable-dem
-        # --disable-download -a aqua.att -e aqua.eph $level1a_file
 
         #Link the unpack data from l0 to l1 data directories
 
@@ -823,7 +752,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
 
         # Start checking and downloading the luts (utcpole.dat and
         # leapsec.dat):
-        LOG.info("Checking the modis luts and updating " +
+        LOG.info("Checking the fengyun3 utcpole and leapsec and updating " +
                  "from internet if necessary!")
         fresh = check_utcpole_and_leapsec_files(DAYS_BETWEEN_URL_DOWNLOAD)
         if fresh:
@@ -832,6 +761,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
             LOG.warning("Files in etc are non existent or too old. " +
                         "Start url fetch...")
             update_utcpole_and_leapsec_files()
+
         # Need to download the 1le file
         download_1le(options)
         
