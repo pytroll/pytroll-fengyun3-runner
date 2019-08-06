@@ -6,6 +6,7 @@
 # Author(s):
 
 #   Martin Raspaud <martin.raspaud@smhi.se>
+#   Trygve Aspenes <trygveas@met.no>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,7 +48,7 @@ def main():
 
     topic = "/XLBANDANTENNA/FENGYUN3D/CLEAR"
 
-    info_dicts = [{"uid": "clear_FY3D_8253_2019-06-19T08:56:02.762_661", "format": "MEOS", "type": "binary", "start_time": "2019-06-19T08:56:02", "orbit_number": 8253, "uri": "ssh:///data/pytroll/fengyun3/clear/clear_FY3D_8253_2019-06-19T08:56:02.762_661", "platform_name": "Fengyun-3D", "end_time": "2019-06-19T09:10:00", "sensor": ["mersi", "hiras", "vass"], "data_processing_level": "0"},]
+    info_dicts = [{"uid": "clear_FY3D_8922_2019-08-05T12:26:24.764_930", "format": "MEOS", "type": "binary", "start_time": "2019-08-05T12:26:24", "orbit_number": 8922, "uri": "ssh:///data/pytroll/fengyun3/clear/clear_FY3D_8922_2019-08-05T12:26:24.764_930", "platform_name": "Fengyun-3D", "end_time": "2019-08-05T12:40:00", "sensor": ["mersi", "hiras", "vass"], "data_processing_level": "0"},]
     message_type = 'file'
 
     for info_dict in info_dicts:
