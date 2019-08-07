@@ -695,6 +695,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
         fy3_l0_bin_dir = os.path.join(options['fengyun3_home'], "fy3dl0db", "bin")
         
         for instrument in options['process_instrument_scripts_l0']:
+            segfault = False
             cmdl = ["{}/{}".format(fy3_l0_bin_dir, instrument),
                     "{}".format(os.path.basename(fileout)),
                     "{}".format(scene['mission'])
@@ -707,21 +708,25 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                 line = fy3_unpack_proc.stdout.readline()
                 if not line:
                     break
+                if 'Segmentation fault' in line:
+                    segfault = True
                 LOG.info(line)
 
             while True:
                 errline = fy3_unpack_proc.stderr.readline()
                 if not errline:
                     break
+                if 'Segmentation fault' in errline:
+                    segfault = True
                 LOG.info(errline)
 
             fy3_unpack_proc.poll()
             fy3_unpack_status = fy3_unpack_proc.returncode
             LOG.debug("Return code from fy3 unpack processing = " +
                       str(fy3_unpack_status))
-            if fy3_unpack_status not in [1, None]:
-                LOG.error("Failed in the FY3 unpack processing!")
-                return None
+            if (fy3_unpack_status not in [1, None] or segfault):
+                LOG.error("Failed in the FY3 unpack processing in script: %s. Skip this.", instrument)
+                continue
 
         #Link the unpack data from l0 to l1 data directories
 
@@ -784,6 +789,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
         pdp['Mwri']['l1_files'] = ['L1B.HDF']
 
         for instrument in options['process_instrument_scripts_l1']:
+            segfault = False
             if 'Mersi' in instrument:
                 data_conf = pdp['Mersi']
             elif 'Hiras' in instrument:
@@ -830,12 +836,16 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                 line = fy3lvl1b_proc.stdout.readline()
                 if not line:
                     break
+                if 'Segmentation fault' in line:
+                    segfault = True
                 LOG.info(line)
 
             while True:
                 errline = fy3lvl1b_proc.stderr.readline()
                 if not errline:
                     break
+                if 'Segmentation fault' in errline:
+                    segfault = True
                 LOG.info(errline)
 
             fy3lvl1b_proc.poll()
@@ -844,9 +854,9 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                       str(fy3lvl1b_status))
             # Apparently a return code of 1 and None is okay...
             # Verify which return codes are ok! FIXME!
-            if fy3lvl1b_status not in [0, 1, None]:
-                LOG.error("Failed in the FENGYUN3 level-1 processing!")
-                return None
+            if (fy3lvl1b_status not in [0, 1, None] or segfault):
+                LOG.error("Failed in the FENGYUN3 level-1 processing in script %s. Skip this.", instrument)
+                continue
 
             l1b_files = []
             for l1_file in data_conf['l1_files']:
