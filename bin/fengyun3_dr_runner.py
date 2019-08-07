@@ -708,17 +708,17 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                 line = fy3_unpack_proc.stdout.readline()
                 if not line:
                     break
-                if 'Segmentation fault' in str(line):
+                if 'Segmentation fault' in line.decode('utf8'):
                     segfault = True
-                LOG.info("%s",line)
+                LOG.info("%s",line.decode('utf8'))
 
             while True:
                 errline = fy3_unpack_proc.stderr.readline()
                 if not errline:
                     break
-                if 'Segmentation fault' in str(errline):
+                if 'Segmentation fault' in errline.decode('utf8'):
                     segfault = True
-                LOG.info("%s",errline)
+                LOG.info("%s",errline.decode('utf8'))
 
             fy3_unpack_proc.poll()
             fy3_unpack_status = fy3_unpack_proc.returncode
@@ -836,17 +836,17 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                 line = fy3lvl1b_proc.stdout.readline()
                 if not line:
                     break
-                if 'Segmentation fault' in line:
+                if 'Segmentation fault' in line.decode('utf8'):
                     segfault = True
-                LOG.info("%s",line)
+                LOG.info("%s",line.decode('utf8'))
 
             while True:
                 errline = fy3lvl1b_proc.stderr.readline()
                 if not errline:
                     break
-                if 'Segmentation fault' in errline:
+                if 'Segmentation fault' in errline.decode('utf8'):
                     segfault = True
-                LOG.info("%s",errline)
+                LOG.info("%s",errline.decode('utf8'))
 
             fy3lvl1b_proc.poll()
             fy3lvl1b_status = fy3lvl1b_proc.returncode
