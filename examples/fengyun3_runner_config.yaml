@@ -38,5 +38,5 @@ test:
 
   #Where to look for the 1le files and where to store them
   one_le:
-    - {http: http://file.nsmc.org.cn/ONELINE/FY3D/43010.dat, out: /software/fengyun/fy3dl1db/SysData/fy3d1line.dat}
+    - {http: http://file.nsmc.org.cn/ONELINE/FY3D/43010.dat, out: fy3d1line.dat}
 #    - {http: http://file.nsmc.org.cn/ONELINE/FY3C/39260.dat, out: /software/fengyun/fy3dl1db/SysData/fy3c1line.dat}
