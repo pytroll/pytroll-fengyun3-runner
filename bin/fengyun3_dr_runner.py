@@ -471,7 +471,7 @@ def check_1le_files(options, thr_hours=1):
     files_ok = True
     for bname in options['one_le']:
         LOG.info("File " + str(bname['out']) + "...")
-        filename = os.path.join(ETC_DIR, os.path.basename(bname['out']))
+        filename = os.path.join(ETC_DIR, bname['out'])
         if os.path.exists(filename):
             # Check how old it is:
             realpath = os.path.realpath(filename)
@@ -521,8 +521,8 @@ def download_1le(options):
         # I store the files with a timestamp attached, in order not to remove
         # the existing files. In case something gets wrong in the download, we
         # can handle this by not changing the sym-links below:
-        outfile = download['out'] + '_' + timestamp
-        linkfile = download['out']
+        outfile = os.path.join(ETC_DIR, download['out'] + '_' + timestamp)
+        linkfile = os.path.join(ETC_DIR, download['out'])
         fd = open(outfile, 'wb')
         fd.write(data)
         fd.close()
