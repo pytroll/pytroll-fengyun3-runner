@@ -710,6 +710,9 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                     break
                 if 'Segmentation fault' in str(line):
                     segfault = True
+                # Due to endless number of these lines they are skipped
+                if 'Cadu number = ' in str(line):
+                    continue
                 try:
                     LOG.info("%s",line.decode('utf8').replace('\n',''))
                 except UnicodeDecodeError:
@@ -844,6 +847,9 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                     break
                 if 'Segmentation fault' in str(line):
                     segfault = True
+                # Due to endless number of these lines they are skipped
+                if 'Cadu number = ' in str(line):
+                    continue
                 try:
                     LOG.info("%s",line.decode('utf8').replace('\n',''))
                 except UnicodeDecodeError:
