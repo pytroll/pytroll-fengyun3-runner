@@ -177,6 +177,9 @@ class FileListener(threading.Thread):
         if not msg:
             return False
 
+        if msg.type != 'file':
+            return False
+
         urlobj = urlparse(msg.data['uri'])
         server = urlobj.netloc
         url_ip = socket.gethostbyname(urlobj.netloc)
