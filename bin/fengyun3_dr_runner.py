@@ -147,7 +147,7 @@ class FileListener(threading.Thread):
     """A file listener class, to listen for incoming messages with a
     relevant file for further processing"""
 
-    def __init__(self, queue, listen_topic, listen_service='receiver'):
+    def __init__(self, queue, listen_topic, listen_service=""):
         threading.Thread.__init__(self)
         self.loop = True
         self.queue = queue
@@ -160,7 +160,7 @@ class FileListener(threading.Thread):
         self.queue.put(None)
 
     def run(self):
-        with posttroll.subscriber.Subscribe('', [
+        with posttroll.subscriber.Subscribe(self.listen_service, [
                 self.listen_topic,
         ], True) as subscr:
 
