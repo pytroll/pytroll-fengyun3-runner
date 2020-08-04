@@ -145,12 +145,13 @@ class FileListener(threading.Thread):
     """A file listener class, to listen for incoming messages with a
     relevant file for further processing"""
 
-    def __init__(self, queue, listen_topic, listen_service='receiver'):
+    def __init__(self, queue, listen_topic, listen_service='receiver', nameserver='localhost'):
         threading.Thread.__init__(self)
         self.loop = True
         self.queue = queue
         self.listen_topic = listen_topic
         self.listen_service = listen_service
+        self.nameserver = nameserver
 
     def stop(self):
         """Stops the file listener"""
@@ -160,7 +161,7 @@ class FileListener(threading.Thread):
     def run(self):
         with posttroll.subscriber.Subscribe('', [
                 self.listen_topic,
-        ], True) as subscr:
+        ], True, nameserver=self.nameserver) as subscr:
 
             for msg in subscr.recv(timeout=90):
                 if not self.loop:
@@ -259,7 +260,8 @@ def fengyun3_live_runner(options):
     pub_thread.start()
     listen_thread = FileListener(listener_q,
                                  options.get('listen_topic','/PDS/0'),
-                                 options.get('listen_service'))
+                                 options.get('listen_service'),
+                                 options.get('nameserver', 'localhost'))
     listen_thread.start()
 
     fy3_files = {}
