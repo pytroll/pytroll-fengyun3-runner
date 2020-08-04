@@ -118,12 +118,13 @@ class FilePublisher(threading.Thread):
 
     """
 
-    def __init__(self, queue, publish_topic):
+    def __init__(self, queue, publish_topic, nameservers):
         threading.Thread.__init__(self)
         self.loop = True
         self.queue = queue
         self.jobs = {}
         self.publish_topic = publish_topic
+        self.nameservers = nameservers
 
     def stop(self):
         """Stops the file publisher"""
@@ -132,7 +133,8 @@ class FilePublisher(threading.Thread):
 
     def run(self):
 
-        with Publish('fengyun3_dr_runner', 0, [self.publish_topic,]) as publisher:
+        with Publish('fengyun3_dr_runner', 0, [self.publish_topic,],
+                     nameservers=self.nameservers) as publisher:
             while self.loop:
                 retv = self.queue.get()
 
@@ -145,13 +147,12 @@ class FileListener(threading.Thread):
     """A file listener class, to listen for incoming messages with a
     relevant file for further processing"""
 
-    def __init__(self, queue, listen_topic, listen_service='receiver', nameserver='localhost'):
+    def __init__(self, queue, listen_topic, listen_service='receiver'):
         threading.Thread.__init__(self)
         self.loop = True
         self.queue = queue
         self.listen_topic = listen_topic
         self.listen_service = listen_service
-        self.nameserver = nameserver
 
     def stop(self):
         """Stops the file listener"""
@@ -161,7 +162,7 @@ class FileListener(threading.Thread):
     def run(self):
         with posttroll.subscriber.Subscribe('', [
                 self.listen_topic,
-        ], True, nameserver=self.nameserver) as subscr:
+        ], True) as subscr:
 
             for msg in subscr.recv(timeout=90):
                 if not self.loop:
@@ -255,13 +256,14 @@ def fengyun3_live_runner(options):
     manager = Manager()
     listener_q = manager.Queue()
     publisher_q = manager.Queue()
-
-    pub_thread = FilePublisher(publisher_q, options.get('publish_topic'))
+    # Assume nameservers is a list
+    nameservers = options.get('nameservers', None)
+    pub_thread = FilePublisher(publisher_q, options.get('publish_topic'),
+                               nameservers=nameservers)
     pub_thread.start()
     listen_thread = FileListener(listener_q,
                                  options.get('listen_topic','/PDS/0'),
-                                 options.get('listen_service'),
-                                 options.get('nameserver', 'localhost'))
+                                 options.get('listen_service'))
     listen_thread.start()
 
     fy3_files = {}
