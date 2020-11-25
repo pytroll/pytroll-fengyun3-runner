@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 - 2019 PyTroll
+# Copyright (c) 2016 - 2012 PyTroll
 
 # Author(s):
 
@@ -676,8 +676,12 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
         fy3dl0db = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/org/')
         fileout = os.path.join(fy3dl0db, compose(options['fy3_l0'], scene) + ".ORG")
         LOG.debug("fileout: %s", str(fileout))
-        #MEOS CLEAR data has cadu size 1072. Rewrite to 1024
-        if os.path.exists(scene['fy3filename']) and os.path.basename(scene['fy3filename']).startswith('clear'):
+        # MEOS CLEAR data has cadu size 1072. Rewrite to 1024
+        # MEOS KSPT format consist of: Sync marker, VCDU frame, Reed-Solomon parity symbols,
+        # frame synchronizer status, acqusition time stamp and Reed-Solomon status (standard KSPT format).
+        # As of plain CADU is: Sync marker, VCDU frame, Reed-Solomon parity symbols.
+        if os.path.exists(scene['fy3filename']) and (os.path.basename(scene['fy3filename']).startswith('clear')
+                                                     or os.path.basename(scene['fy3filename']).startswith('rawdata')):
             LOG.info("Rewrite MEOS clear file ...")
             fd_out = open(fileout, 'wb')
             with open(scene['fy3filename'], 'rb') as fd:
