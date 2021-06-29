@@ -677,7 +677,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
         fileout = os.path.join(fy3dl0db, compose(options['fy3_l0'], scene) + ".ORG")
         LOG.debug("fileout: %s", str(fileout))
         #MEOS CLEAR data has cadu size 1072. Rewrite to 1024
-        if os.path.exists(scene['fy3filename']) and os.path.basename(scene['fy3filename']).startswith('clear'):
+        if os.path.exists(scene['fy3filename']) and (os.path.basename(scene['fy3filename']).startswith('clear') or os.path.basename(scene['fy3filename']).startswith('rawdata')):
             LOG.info("Rewrite MEOS clear file ...")
             fd_out = open(fileout, 'wb')
             with open(scene['fy3filename'], 'rb') as fd:
