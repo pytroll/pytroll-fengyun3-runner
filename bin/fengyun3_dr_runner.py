@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2016 - 2019 PyTroll
+# Copyright (c) 2016 - 2019,2021 PyTroll
 
 # Author(s):
 
@@ -700,10 +700,12 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
             os.environ['LD_LIBRARY_PATH'] = options.get('ld_library_path')
         LOG.info("Level-0 filename: " + str(fileout))
         fy3_l0_bin_dir = os.path.join(options['fengyun3_home'], "fy3dl0db", "bin")
-        
+        processing_timeout_timeout = "1h"
+
         for instrument in options['process_instrument_scripts_l0']:
             segfault = False
-            cmdl = ["{}/{}".format(fy3_l0_bin_dir, instrument),
+            cmdl = ["timeout", "{}".format(processing_timeout_timeout),
+                    "{}/{}".format(fy3_l0_bin_dir, instrument),
                     "{}".format(os.path.basename(fileout)),
                     "{}".format(scene['mission'])
             ]
@@ -836,7 +838,10 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
                 os.link(link_file, link_name)
             else:
                 LOG.debug("Could not find file from unpack to link to l1 file: %s", link_file)
-            cmdl = ["{}/{}".format(fy3_l1_home, instrument)]
+            cmdl = []
+            cmdl.append("timeout")
+            cmdl.append("{}".format(processing_timeout_timeout))
+            cmdl.append("{}/{}".format(fy3_l1_home, instrument))
             if data_conf['sensor'] != 'MWHSX':
                 cmdl.append("GPSXX.DAT")
             if data_conf['sensor'] == 'MERSI':
