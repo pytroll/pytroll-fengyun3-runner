@@ -75,7 +75,7 @@ elif six.PY3:
     from urllib.parse import urlunsplit
     from queue import Empty
 
-FY3_SATELLITES = ['Fengyun-3D']
+FY3_SATELLITES = ['Fengyun-3D', 'fengyun 3d']
 
 MWRI_MISSIONS = ['FY3A', 'FY3B', 'FY3C']
 HIRAS_MISSIONS = ['FY3D']
