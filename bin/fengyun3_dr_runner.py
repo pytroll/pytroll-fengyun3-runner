@@ -409,7 +409,7 @@ def ready2run(message, fy3files, job_register, sceneid, options):
         LOG.warning("start_time not in message!")
         start_time = None
 
-    if (message.data['platform_name'] == "Fengyun-3D"
+    if (message.data['platform_name'] in FY3_SATELLITES
             and ('mersi' in message.data['sensor'] or 'mwri' in message.data['sensor'])):
 
         path, fname = os.path.split(urlobj.path)
@@ -670,7 +670,7 @@ def run_fy3_l0l1(scene, message, job_id, publish_q, options):
         working_dir = get_working_dir(options)
         LOG.debug("Working dir = %s", str(working_dir))
 
-        if scene['platform_name'] == 'Fengyun-3D':
+        if scene['platform_name'] == 'Fengyun-3D' or scene['platform_name'] == 'fengyun 3d':
             scene['mission'] = 'FY3D'
 
         fy3dl0db = os.path.join(options['fengyun3_home'], 'fy3dl0db/data/org/')
